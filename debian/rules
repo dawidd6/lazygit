@@ -1,0 +1,25 @@
+#!/usr/bin/make -f
+
+export PATH := /usr/lib/go-1.10/bin:$(PATH)
+export DH_GOLANG_INSTALL_ALL := 1
+export DH_GOLANG_EXCLUDES := github.com/jesseduffield/lazygit/scripts
+export COMMIT := $(shell dpkg-parsechangelog -S Version | egrep --only-matching "[0-9a-z]{7}-" | cut -c 1-7)
+ifeq ($(COMMIT), )
+export VERSION := $(shell dpkg-parsechangelog -S Version | cut -d'-' -f1)
+endif
+
+%:
+	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_install:
+
+override_dh_auto_test:
+
+override_dh_auto_build:
+	@echo "COMMIT=$(COMMIT)"
+	@echo "VERSION=$(VERSION)"
+	dh_auto_build -- -ldflags \
+		"-X main.commit=$(COMMIT) \
+		-X main.date=$(shell date -u +%Y-%m-%d) \
+		-X main.version=$(VERSION) \
+		-X main.buildSource=debian"

@@ -1,0 +1,11 @@
+lazygit (0.8.1-1) xenial; urgency=medium
+
+  * New upstream release.
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Mon, 24 Jun 2019 14:18:55 +0200
+
+lazygit (0.0~git20180805.0.6e585c5-1) xenial; urgency=medium
+
+  * Initial release
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Sun, 05 Aug 2018 15:50:05 +0200
