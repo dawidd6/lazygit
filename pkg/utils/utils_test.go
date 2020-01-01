@@ -169,7 +169,7 @@ func TestResolvePlaceholderString(t *testing.T) {
 	}
 
 	for _, s := range scenarios {
-		assert.EqualValues(t, string(s.expected), ResolvePlaceholderString(s.templateString, s.arguments))
+		assert.EqualValues(t, s.expected, ResolvePlaceholderString(s.templateString, s.arguments))
 	}
 }
 
@@ -485,7 +485,7 @@ func TestNextIndex(t *testing.T) {
 			"no elements",
 			[]int{},
 			1,
-			0,
+			-1,
 		},
 		{
 			"one element",
@@ -503,7 +503,7 @@ func TestNextIndex(t *testing.T) {
 			"two elements, giving second one",
 			[]int{1, 2},
 			2,
-			0,
+			1,
 		},
 		{
 			"three elements, giving second one",
@@ -534,7 +534,7 @@ func TestPrevIndex(t *testing.T) {
 			"no elements",
 			[]int{},
 			1,
-			-1,
+			0,
 		},
 		{
 			"one element",
@@ -546,7 +546,7 @@ func TestPrevIndex(t *testing.T) {
 			"two elements",
 			[]int{1, 2},
 			1,
-			1,
+			0,
 		},
 		{
 			"three elements, giving second one",

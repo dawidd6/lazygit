@@ -2,12 +2,13 @@
 
 ## Default:
 
-```
+```yaml
   gui:
     # stuff relating to the UI
     scrollHeight: 2 # how many lines you scroll by
     scrollPastBottom: true # enable scrolling past the bottom
     theme:
+      lightTheme: false # For terminals with a light background
       activeBorderColor:
         - white
         - bold
@@ -17,11 +18,13 @@
         - blue
     commitLength:
       show: true
+    mouseEvents: true
   git:
     merging:
       # only applicable to unix users
       manualCommit: false
     skipHookPrefix: WIP
+    autoFetch: true
   update:
     method: prompt # can be: prompt | background | never
     days: 14 # how often an update is checked for
@@ -33,21 +36,21 @@
 
 ### Windows:
 
-```
+```yaml
   os:
     openCommand: 'cmd /c "start "" {{filename}}"'
 ```
 
 ### Linux:
 
-```
+```yaml
   os:
     openCommand: 'sh -c "xdg-open {{filename}} >/dev/null"'
 ```
 
 ### OSX:
 
-```
+```yaml
   os:
     openCommand: 'open {{filename}}'
 ```
@@ -56,7 +59,7 @@
 
 for users of VSCode
 
-```
+```yaml
   os:
     openCommand: 'code -r {{filename}}'
 ```
@@ -78,6 +81,21 @@ The available attributes are:
 - bold
 - reverse # useful for high-contrast
 - underline
+
+## Light terminal theme:
+
+If you have issues with a light terminal theme where you can't read / see the text add these settings
+
+```yaml
+  gui:
+    theme:
+      lightTheme: true
+      activeBorderColor:
+        - black
+        - bold
+      inactiveBorderColor:
+        - black
+```
 
 ## Example Coloring:
 

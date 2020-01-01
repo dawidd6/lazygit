@@ -14,6 +14,7 @@ import (
 	"github.com/golang-collections/collections/stack"
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
+	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
@@ -23,7 +24,7 @@ func (gui *Gui) findConflicts(content string) ([]commands.Conflict, error) {
 	for i, line := range utils.SplitLines(content) {
 		trimmedLine := strings.TrimPrefix(line, "++")
 		gui.Log.Info(trimmedLine)
-		if trimmedLine == "<<<<<<< HEAD" || trimmedLine == "<<<<<<< MERGE_HEAD" || trimmedLine == "<<<<<<< Updated upstream" {
+		if trimmedLine == "<<<<<<< HEAD" || trimmedLine == "<<<<<<< MERGE_HEAD" || trimmedLine == "<<<<<<< Updated upstream" || trimmedLine == "<<<<<<< ours" {
 			newConflict = commands.Conflict{Start: i}
 		} else if trimmedLine == "=======" {
 			newConflict.Middle = i
@@ -50,7 +51,7 @@ func (gui *Gui) coloredConflictFile(content string, conflicts []commands.Conflic
 	conflict, remainingConflicts := gui.shiftConflict(conflicts)
 	var outputBuffer bytes.Buffer
 	for i, line := range utils.SplitLines(content) {
-		colourAttr := color.FgWhite
+		colourAttr := theme.DefaultTextColor
 		if i == conflict.Start || i == conflict.Middle || i == conflict.End {
 			colourAttr = color.FgRed
 		}
@@ -284,7 +285,7 @@ func (gui *Gui) handleCompleteMerge() error {
 
 // promptToContinue asks the user if they want to continue the rebase/merge that's in progress
 func (gui *Gui) promptToContinue() error {
-	return gui.createConfirmationPanel(gui.g, gui.getFilesView(), "continue", gui.Tr.SLocalize("ConflictsResolved"), func(g *gocui.Gui, v *gocui.View) error {
+	return gui.createConfirmationPanel(gui.g, gui.getFilesView(), true, "continue", gui.Tr.SLocalize("ConflictsResolved"), func(g *gocui.Gui, v *gocui.View) error {
 		return gui.genericMergeCommand("continue")
 	}, nil)
 }

@@ -58,14 +58,14 @@ func (f fileInfoMock) Sys() interface{} {
 func TestVerifyInGitRepo(t *testing.T) {
 	type scenario struct {
 		testName string
-		runCmd   func(string) error
+		runCmd   func(string, ...interface{}) error
 		test     func(error)
 	}
 
 	scenarios := []scenario{
 		{
 			"Valid git repository",
-			func(string) error {
+			func(string, ...interface{}) error {
 				return nil
 			},
 			func(err error) {
@@ -74,7 +74,7 @@ func TestVerifyInGitRepo(t *testing.T) {
 		},
 		{
 			"Not a valid git repository",
-			func(string) error {
+			func(string, ...interface{}) error {
 				return fmt.Errorf("fatal: Not a git repository (or any of the parent directories): .git")
 			},
 			func(err error) {
@@ -356,56 +356,72 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 			func(cmd string, args ...string) *exec.Cmd {
 				return exec.Command(
 					"echo",
-					"MM file1.txt\nA  file3.txt\nAM file2.txt\n?? file4.txt",
+					"MM file1.txt\nA  file3.txt\nAM file2.txt\n?? file4.txt\nUU file5.txt",
 				)
 			},
 			func(files []*File) {
-				assert.Len(t, files, 4)
+				assert.Len(t, files, 5)
 
 				expected := []*File{
 					{
-						Name:               "file1.txt",
-						HasStagedChanges:   true,
-						HasUnstagedChanges: true,
-						Tracked:            true,
-						Deleted:            false,
-						HasMergeConflicts:  false,
-						DisplayString:      "MM file1.txt",
-						Type:               "other",
-						ShortStatus:        "MM",
+						Name:                    "file1.txt",
+						HasStagedChanges:        true,
+						HasUnstagedChanges:      true,
+						Tracked:                 true,
+						Deleted:                 false,
+						HasMergeConflicts:       false,
+						HasInlineMergeConflicts: false,
+						DisplayString:           "MM file1.txt",
+						Type:                    "other",
+						ShortStatus:             "MM",
 					},
 					{
-						Name:               "file3.txt",
-						HasStagedChanges:   true,
-						HasUnstagedChanges: false,
-						Tracked:            false,
-						Deleted:            false,
-						HasMergeConflicts:  false,
-						DisplayString:      "A  file3.txt",
-						Type:               "other",
-						ShortStatus:        "A ",
+						Name:                    "file3.txt",
+						HasStagedChanges:        true,
+						HasUnstagedChanges:      false,
+						Tracked:                 false,
+						Deleted:                 false,
+						HasMergeConflicts:       false,
+						HasInlineMergeConflicts: false,
+						DisplayString:           "A  file3.txt",
+						Type:                    "other",
+						ShortStatus:             "A ",
 					},
 					{
-						Name:               "file2.txt",
-						HasStagedChanges:   true,
-						HasUnstagedChanges: true,
-						Tracked:            false,
-						Deleted:            false,
-						HasMergeConflicts:  false,
-						DisplayString:      "AM file2.txt",
-						Type:               "other",
-						ShortStatus:        "AM",
+						Name:                    "file2.txt",
+						HasStagedChanges:        true,
+						HasUnstagedChanges:      true,
+						Tracked:                 false,
+						Deleted:                 false,
+						HasMergeConflicts:       false,
+						HasInlineMergeConflicts: false,
+						DisplayString:           "AM file2.txt",
+						Type:                    "other",
+						ShortStatus:             "AM",
 					},
 					{
-						Name:               "file4.txt",
-						HasStagedChanges:   false,
-						HasUnstagedChanges: true,
-						Tracked:            false,
-						Deleted:            false,
-						HasMergeConflicts:  false,
-						DisplayString:      "?? file4.txt",
-						Type:               "other",
-						ShortStatus:        "??",
+						Name:                    "file4.txt",
+						HasStagedChanges:        false,
+						HasUnstagedChanges:      true,
+						Tracked:                 false,
+						Deleted:                 false,
+						HasMergeConflicts:       false,
+						HasInlineMergeConflicts: false,
+						DisplayString:           "?? file4.txt",
+						Type:                    "other",
+						ShortStatus:             "??",
+					},
+					{
+						Name:                    "file5.txt",
+						HasStagedChanges:        false,
+						HasUnstagedChanges:      true,
+						Tracked:                 true,
+						Deleted:                 false,
+						HasMergeConflicts:       true,
+						HasInlineMergeConflicts: true,
+						DisplayString:           "UU file5.txt",
+						Type:                    "other",
+						ShortStatus:             "UU",
 					},
 				}
 
@@ -904,7 +920,7 @@ func TestGitCommandAmendHead(t *testing.T) {
 			"Amend commit using gpg",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "bash", cmd)
-				assert.EqualValues(t, []string{"-c", "git commit --amend --no-edit"}, args)
+				assert.EqualValues(t, []string{"-c", "git commit --amend --no-edit --allow-empty"}, args)
 
 				return exec.Command("echo")
 			},
@@ -920,7 +936,7 @@ func TestGitCommandAmendHead(t *testing.T) {
 			"Amend commit without using gpg",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"commit", "--amend", "--no-edit"}, args)
+				assert.EqualValues(t, []string{"commit", "--amend", "--no-edit", "--allow-empty"}, args)
 
 				return exec.Command("echo")
 			},
@@ -936,7 +952,7 @@ func TestGitCommandAmendHead(t *testing.T) {
 			"Amend commit without using gpg with an error",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"commit", "--amend", "--no-edit"}, args)
+				assert.EqualValues(t, []string{"commit", "--amend", "--no-edit", "--allow-empty"}, args)
 
 				return exec.Command("test")
 			},
@@ -974,7 +990,7 @@ func TestGitCommandPush(t *testing.T) {
 			"Push with force disabled",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"push", "-u", "origin", "test"}, args)
+				assert.EqualValues(t, []string{"push", "--follow-tags"}, args)
 
 				return exec.Command("echo")
 			},
@@ -987,7 +1003,7 @@ func TestGitCommandPush(t *testing.T) {
 			"Push with force enabled",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"push", "--force-with-lease", "-u", "origin", "test"}, args)
+				assert.EqualValues(t, []string{"push", "--follow-tags", "--force-with-lease"}, args)
 
 				return exec.Command("echo")
 			},
@@ -1000,7 +1016,7 @@ func TestGitCommandPush(t *testing.T) {
 			"Push with an error occurring",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"push", "-u", "origin", "test"}, args)
+				assert.EqualValues(t, []string{"push", "--follow-tags"}, args)
 				return exec.Command("test")
 			},
 			false,
@@ -1014,7 +1030,7 @@ func TestGitCommandPush(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
-			err := gitCmd.Push("test", s.forcePush, func(passOrUname string) string {
+			err := gitCmd.Push("test", s.forcePush, "", func(passOrUname string) string {
 				return "\n"
 			})
 			s.test(err)
@@ -1278,7 +1294,7 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 			},
 		},
 		{
-			"Reset and checkout",
+			"Reset and checkout staged changes",
 			func() (func(string, ...string) *exec.Cmd, *[][]string) {
 				cmdsCalled := [][]string{}
 				return func(cmd string, args ...string) *exec.Cmd {
@@ -1299,6 +1315,33 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 				Name:             "test",
 				Tracked:          true,
 				HasStagedChanges: true,
+			},
+			func(string) error {
+				return nil
+			},
+		},
+		{
+			"Reset and checkout merge conflicts",
+			func() (func(string, ...string) *exec.Cmd, *[][]string) {
+				cmdsCalled := [][]string{}
+				return func(cmd string, args ...string) *exec.Cmd {
+					cmdsCalled = append(cmdsCalled, args)
+
+					return exec.Command("echo")
+				}, &cmdsCalled
+			},
+			func(cmdsCalled *[][]string, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, *cmdsCalled, 2)
+				assert.EqualValues(t, *cmdsCalled, [][]string{
+					{"reset", "--", "test"},
+					{"checkout", "--", "test"},
+				})
+			},
+			&File{
+				Name:              "test",
+				Tracked:           true,
+				HasMergeConflicts: true,
 			},
 			func(string) error {
 				return nil
@@ -1383,7 +1426,7 @@ func TestGitCommandShow(t *testing.T) {
 			"456abcde",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git show --color 456abcde",
+					Expect:  "git show --color --no-renames 456abcde",
 					Replace: "echo \"commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nblah\"",
 				},
 				{
@@ -1401,7 +1444,7 @@ func TestGitCommandShow(t *testing.T) {
 			"456abcde",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git show --color 456abcde",
+					Expect:  "git show --color --no-renames 456abcde",
 					Replace: "echo \"commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nMerge: 1a6a69a 3b51d7c\"",
 				},
 				{
@@ -1496,6 +1539,7 @@ func TestGitCommandDiff(t *testing.T) {
 		command  func(string, ...string) *exec.Cmd
 		file     *File
 		plain    bool
+		cached   bool
 	}
 
 	scenarios := []scenario{
@@ -1513,9 +1557,26 @@ func TestGitCommandDiff(t *testing.T) {
 				Tracked:          true,
 			},
 			false,
+			false,
 		},
 		{
-			"Default case",
+			"cached",
+			func(cmd string, args ...string) *exec.Cmd {
+				assert.EqualValues(t, "git", cmd)
+				assert.EqualValues(t, []string{"diff", "--color", "--cached", "--", "test.txt"}, args)
+
+				return exec.Command("echo")
+			},
+			&File{
+				Name:             "test.txt",
+				HasStagedChanges: false,
+				Tracked:          true,
+			},
+			false,
+			true,
+		},
+		{
+			"plain",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
 				assert.EqualValues(t, []string{"diff", "--", "test.txt"}, args)
@@ -1528,21 +1589,6 @@ func TestGitCommandDiff(t *testing.T) {
 				Tracked:          true,
 			},
 			true,
-		},
-		{
-			"All changes staged",
-			func(cmd string, args ...string) *exec.Cmd {
-				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"diff", "--color", "--cached", "--", "test.txt"}, args)
-
-				return exec.Command("echo")
-			},
-			&File{
-				Name:               "test.txt",
-				HasStagedChanges:   true,
-				HasUnstagedChanges: false,
-				Tracked:            true,
-			},
 			false,
 		},
 		{
@@ -1559,6 +1605,7 @@ func TestGitCommandDiff(t *testing.T) {
 				Tracked:          false,
 			},
 			false,
+			false,
 		},
 	}
 
@@ -1566,7 +1613,7 @@ func TestGitCommandDiff(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
-			gitCmd.Diff(s.file, s.plain)
+			gitCmd.Diff(s.file, s.plain, s.cached)
 		})
 	}
 }
@@ -1592,7 +1639,7 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 			},
 		},
 		{
-			"falls back to git rev-parse if symbolic-ref fails",
+			"falls back to git `git branch --contains` if symbolic-ref fails",
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
 
@@ -1600,9 +1647,9 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 				case "symbolic-ref":
 					assert.EqualValues(t, []string{"symbolic-ref", "--short", "HEAD"}, args)
 					return exec.Command("test")
-				case "rev-parse":
-					assert.EqualValues(t, []string{"rev-parse", "--short", "HEAD"}, args)
-					return exec.Command("echo", "master")
+				case "branch":
+					assert.EqualValues(t, []string{"branch", "--contains"}, args)
+					return exec.Command("echo", "* master")
 				}
 
 				return nil
@@ -1638,7 +1685,7 @@ func TestGitCommandApplyPatch(t *testing.T) {
 	type scenario struct {
 		testName string
 		command  func(string, ...string) *exec.Cmd
-		test     func(string, error)
+		test     func(error)
 	}
 
 	scenarios := []scenario{
@@ -1655,9 +1702,8 @@ func TestGitCommandApplyPatch(t *testing.T) {
 
 				return exec.Command("echo", "done")
 			},
-			func(output string, err error) {
+			func(err error) {
 				assert.NoError(t, err)
-				assert.EqualValues(t, "done\n", output)
 			},
 		},
 		{
@@ -1677,7 +1723,7 @@ func TestGitCommandApplyPatch(t *testing.T) {
 
 				return exec.Command("test")
 			},
-			func(output string, err error) {
+			func(err error) {
 				assert.Error(t, err)
 			},
 		},
@@ -1687,7 +1733,7 @@ func TestGitCommandApplyPatch(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
-			s.test(gitCmd.ApplyPatch("test"))
+			s.test(gitCmd.ApplyPatch("test", "cached"))
 		})
 	}
 }
@@ -1707,7 +1753,7 @@ func TestGitCommandRebaseBranch(t *testing.T) {
 			"master",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git rebase --interactive --autostash master",
+					Expect:  "git rebase --interactive --autostash --keep-empty --rebase-merges master",
 					Replace: "echo",
 				},
 			}),
@@ -1720,7 +1766,7 @@ func TestGitCommandRebaseBranch(t *testing.T) {
 			"master",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git rebase --interactive --autostash master",
+					Expect:  "git rebase --interactive --autostash --keep-empty --rebase-merges master",
 					Replace: "test",
 				},
 			}),
@@ -1843,7 +1889,7 @@ func TestGitCommandDiscardOldFileChanges(t *testing.T) {
 			"test999.txt",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git rebase --interactive --autostash abcdef",
+					Expect:  "git rebase --interactive --autostash --keep-empty --rebase-merges abcdef",
 					Replace: "echo",
 				},
 				{
@@ -1855,7 +1901,7 @@ func TestGitCommandDiscardOldFileChanges(t *testing.T) {
 					Replace: "echo",
 				},
 				{
-					Expect:  "git commit --amend --no-edit",
+					Expect:  "git commit --amend --no-edit --allow-empty",
 					Replace: "echo",
 				},
 				{
@@ -1899,7 +1945,7 @@ func TestGitCommandShowCommitFile(t *testing.T) {
 			"hello.txt",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git show --color 123456 -- hello.txt",
+					Expect:  "git show --no-renames 123456 -- hello.txt",
 					Replace: "echo -n hello",
 				},
 			}),
@@ -1915,7 +1961,7 @@ func TestGitCommandShowCommitFile(t *testing.T) {
 	for _, s := range scenarios {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd.OSCommand.command = s.command
-			s.test(gitCmd.ShowCommitFile(s.commitSha, s.fileName))
+			s.test(gitCmd.ShowCommitFile(s.commitSha, s.fileName, true))
 		})
 	}
 }
@@ -1935,7 +1981,7 @@ func TestGitCommandGetCommitFiles(t *testing.T) {
 			"123456",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git show --pretty= --name-only 123456",
+					Expect:  "git show --pretty= --name-only --no-renames 123456",
 					Replace: "echo 'hello\nworld'",
 				},
 			}),
@@ -1954,7 +2000,7 @@ func TestGitCommandGetCommitFiles(t *testing.T) {
 	for _, s := range scenarios {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd.OSCommand.command = s.command
-			s.test(gitCmd.GetCommitFiles(s.commitSha))
+			s.test(gitCmd.GetCommitFiles(s.commitSha, nil))
 		})
 	}
 }
