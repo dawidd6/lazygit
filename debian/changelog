@@ -1,3 +1,209 @@
+lazygit (0.11.3-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * Revert "emergency situation: we're not logging to rollrus while we're past the request quota"
+  * use fork of roll that doesn't care about errors
+  * Create FUNDING.yml
+
+  [ Giorgio Previtera ]
+  * 472 - Don't panic if not in a repository
+  * 472 - Update error message
+
+  [ haowei ]
+  * fix typo
+
+  [ Jesse Duffield ]
+  * show actual error when trying to check out a branch that doesn't exist
+
+  [ Tomáš Horáček ]
+  * Add syntax highlighting to Config.md
+
+  [ Christian Muehlhaeuser ]
+  * Removed unnecessary string conversion
+  * Simplified code a bit
+  * Swallow errors entirely, instead of assigning and ignoring them
+  * err was assigned but never checked
+  * Simplified boolean comparison
+
+  [ Giorgio Previtera ]
+  * #477 Discard changes when there are merge conflicts
+  * 477 Remove duplicate checkout
+  * 477 Add new `NeedReset` property to File and update tests
+  * #477 Remove `NeedMerge` boolean
+  * 477 Remove unnecessary variable check
+
+  [ Dawid Dziurla ]
+  * switch to Go modules
+  * adjust CI to Go modules
+
+  [ matejcik ]
+  * configurable auto-fetch
+  * startBackgroundFetch does not return errors
+  * use gui.g directly
+  * move git config options to top-level in default config
+  * use git.autoFetch config option
+
+  [ Jesse Duffield ]
+  * add autoFetch to config doc
+  * bump gocui
+  * use vendor directory in test.sh
+  * force underlying go commands under gox to use the vendor directory
+  * update go.sum
+
+  [ Dawid Dziurla ]
+  * update go.sum again
+  * download updated binary to config dir rather than /tmp
+  * UserConfigPath -> UserConfigDir
+
+  [ Glenn Vriesman ]
+  * Main: Added directory argument
+  * Mod: Added flaggy to vendor directory
+  * Main: Use --path instead of positional
+
+  [ mjarkk ]
+  * Added light theme option to the settings
+  * Updated the config.md
+  * Removed the pkg/gui/theme.go file
+
+  [ Giorgio Previtera ]
+  * #480 Allow cycling side panels with number keys
+  * 480 - remove duplication by using a decorator
+  * \#480 Close popup panels before switching to a side view
+
+  [ Rui Chen ]
+  * Anchor image tag to specific version
+  * Upgrade to go v1.13
+
+  [ Jesse Duffield ]
+  * Update FUNDING.yml
+  * Update FUNDING.yml
+  * rewrite staging to support line ranges and reversing
+  * support split view in staging panel and staging ranges
+  * bump gocui
+  * use v keybindings instead of c
+
+  [ Dawid Dziurla ]
+  * fix module checksum mismatch
+  * go mod vendor
+  * please golang-ci
+  * fix headerRegexp
+
+  [ Jesse Duffield ]
+  * don't unsplit main panel unconditionally on focus lost
+  * use array of ints instead of range
+  * Support building and moving patches
+  * better rebase args
+  * checks for if we're in a normal working tree state
+  * move PatchManager to GitCommand
+  * clear patch after successful patch operation
+  * create backups of patch files in case something goes wrong
+  * reorder patch command options
+  * use fallback approach for applying patch
+  * handle empty commit in rebase
+  * support line by line additions in staging and patch building contexts
+  * handling when to show the split panel
+  * do not return focus to commitsFiles view after selecting to start a new patch
+  * more work on managing focus when applying patch command
+  * don't let patch manager ever be nil
+  * fix ambiguous condition
+  * strip whitespace when there is nothing else
+  * better interface for ApplyPatch function
+  * better titles
+  * only test with non-original header
+  * fix tests
+  * Update README.md
+  * support ours/theirs merge conflict headers
+  * Update README.md
+  * Update README.md
+  * Update README.md
+  * Update README.md
+  * remove old add patch keybinding
+  * reset patch builder when we've escaped from the building phase and nothing has been added
+  * add mouse support
+  * simplify how the context system works
+  * don't try to give a logrus entry object to gocui
+  * bump gocui (this better work or so hope me god I'm switching back to go dep)
+  * allow secondary view to be scrolled
+  * add '?' keybinding for opening options menu
+  * add some shameless self promotion
+  * support clicking through to commit files panel
+  * rm go.sum && go mod vendor
+
+  [ Glenn Vriesman ]
+  * Vendor: Updated dependencies
+
+  [ Jesse Duffield ]
+  * Update README.md
+  * allow for changing the current directory on exit
+  * Update README.md
+  * Update README.md
+  * specify upstream when pushing a branch for the first time
+
+  [ jaanjahimees ]
+  * Fix typo in README `.zhsrc` -> `.zshrc`
+
+  [ Jesse Duffield ]
+  * remove go-getter
+  * go mod vendor
+  * fix up pty fork
+
+  [ Dawid Dziurla ]
+  * README: fix typo
+
+  [ Jesse Duffield ]
+  * prompt to set upstream when pulling on untracked branch
+  * show upstream branch for branch
+  * update go git
+  * allow editing or opening a file while resolving merge conflicts
+  * add file watching for modified files
+  * go mod tidy && go mod vendor
+
+  [ Lothar Haeger ]
+  * Readme: add MacPorts install source
+
+  [ Jesse Duffield ]
+  * add remote model
+  * add remotes context to branches view
+  * bump gocui to get contexts on keybindings
+  * add contexts to views
+  * extract out some logic for list views
+  * trying to use gogit with branches from remotes
+  * get remote branches when getting remotes
+  * allow changing tabs with [ and ]
+  * remove redundant logging
+  * support navigating remotes view
+  * support viewing a remote branch
+  * only refresh branches panel on focus lost when in the local-branches context
+  * get branches with git for-each-ref
+  * split RemoteBranch out from Branch
+  * support adding/removing remotes
+  * support detached heads when showing the selected branch
+  * support merging remote branches into checked out branch
+  * ensure we switch tabs when switching context
+  * support deleting remote branches
+  * support rebasing onto remote branch
+  * make upstream branch display more lenient on git errors
+  * better fast forward
+  * support setting upstream
+  * better handling of click events in list views
+  * refactor confirmation prompt code
+  * require double clicking menu items so you know what you're clicking
+  * allow editing remotes
+  * add tags panel
+  * give RunCommand the same input signature as fmt.Sprintf
+  * couple of things to clean up after rebasing onto master
+  * fix specs
+  * don't pass single commands directly to RunCommand (or equivalent function) when it contains percentages.
+  * fix typo
+  * unescape another string
+  * support older versions of git when getting remote branches
+  * lenient sorting of tags on startup
+
+  [ Dawid Dziurla ]
+  * d/gbp.conf: change debian-branch
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Thu, 02 Jan 2020 00:50:27 +0100
+
 lazygit (0.8.1-1) xenial; urgency=medium
 
   * New upstream release.
