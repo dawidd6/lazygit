@@ -265,7 +265,7 @@ func includesInt(list []int, a int) bool {
 
 // ResetAndClean removes all unstaged changes and removes all untracked files
 func (c *GitCommand) ResetAndClean() error {
-	if err := c.ResetHardHead(); err != nil {
+	if err := c.ResetHard("HEAD"); err != nil {
 		return err
 	}
 
@@ -515,7 +515,7 @@ func (c *GitCommand) DiscardUnstagedFileChanges(file *File) error {
 	return c.OSCommand.RunCommand("git checkout -- %s", quotedFileName)
 }
 
-// Checkout checks out a branch, with --force if you set the force arg to true
+// Checkout checks out a branch (or commit), with --force if you set the force arg to true
 func (c *GitCommand) Checkout(branch string, force bool) error {
 	forceArg := ""
 	if force {
@@ -628,7 +628,7 @@ func (c *GitCommand) Diff(file *File, plain bool, cached bool) string {
 
 func (c *GitCommand) ApplyPatch(patch string, flags ...string) error {
 	c.Log.Warn(patch)
-	filepath := filepath.Join(c.Config.GetUserConfigDir(), utils.GetCurrentRepoName(), time.Now().Format(time.StampNano)+".patch")
+	filepath := filepath.Join(c.Config.GetUserConfigDir(), utils.GetCurrentRepoName(), time.Now().Format("Jan _2 15.04.05.000000000")+".patch")
 	if err := c.OSCommand.CreateFileWithContent(filepath, patch); err != nil {
 		return err
 	}
@@ -961,14 +961,14 @@ func (c *GitCommand) RemoveUntrackedFiles() error {
 	return c.OSCommand.RunCommand("git clean -fd")
 }
 
-// ResetHardHead runs `git reset --hard HEAD`
-func (c *GitCommand) ResetHardHead() error {
-	return c.OSCommand.RunCommand("git reset --hard HEAD")
+// ResetHardHead runs `git reset --hard`
+func (c *GitCommand) ResetHard(ref string) error {
+	return c.OSCommand.RunCommand("git reset --hard " + ref)
 }
 
-// ResetSoftHead runs `git reset --soft HEAD`
-func (c *GitCommand) ResetSoftHead() error {
-	return c.OSCommand.RunCommand("git reset --soft HEAD")
+// ResetSoft runs `git reset --soft HEAD`
+func (c *GitCommand) ResetSoft(ref string) error {
+	return c.OSCommand.RunCommand("git reset --soft " + ref)
 }
 
 // DiffCommits show diff between commits
@@ -1108,4 +1108,8 @@ func (c *GitCommand) DeleteTag(tagName string) error {
 
 func (c *GitCommand) PushTag(remoteName string, tagName string) error {
 	return c.OSCommand.RunCommand("git push %s %s", remoteName, tagName)
+}
+
+func (c *GitCommand) FetchRemote(remoteName string) error {
+	return c.OSCommand.RunCommand("git fetch %s", remoteName)
 }

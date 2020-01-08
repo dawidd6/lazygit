@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"runtime"
 	"sync"
 
 	// "io"
@@ -14,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/go-errors/errors"
 
 	// "strings"
@@ -28,6 +28,7 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/updates"
 	"github.com/jesseduffield/lazygit/pkg/utils"
+	"github.com/mattn/go-runewidth"
 	"github.com/sirupsen/logrus"
 )
 
@@ -80,7 +81,7 @@ type Gui struct {
 	statusManager *statusManager
 	credentials   credentials
 	waitForIntro  sync.WaitGroup
-	fileWatcher   *fsnotify.Watcher
+	fileWatcher   *fileWatcher
 }
 
 // for now the staging panel state, unlike the other panel states, is going to be
@@ -553,6 +554,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			commitMessageView.Title = gui.Tr.SLocalize("CommitMessage")
 			commitMessageView.FgColor = textColor
 			commitMessageView.Editable = true
+			commitMessageView.Editor = gocui.EditorFunc(gui.commitMessageEditor)
 		}
 	}
 
@@ -740,11 +742,11 @@ func (gui *Gui) renderAppStatus() error {
 
 func (gui *Gui) renderGlobalOptions() error {
 	return gui.renderOptionsMap(map[string]string{
-		"PgUp/PgDn": gui.Tr.SLocalize("scroll"),
-		"← → ↑ ↓":   gui.Tr.SLocalize("navigate"),
-		"esc/q":     gui.Tr.SLocalize("close"),
-		"x":         gui.Tr.SLocalize("menu"),
-		"1-5":       gui.Tr.SLocalize("jump"),
+		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.scrollUpMain"), gui.getKeyDisplay("universal.scrollDownMain")):                                                                                 gui.Tr.SLocalize("scroll"),
+		fmt.Sprintf("%s %s %s %s", gui.getKeyDisplay("universal.prevBlock"), gui.getKeyDisplay("universal.nextBlock"), gui.getKeyDisplay("universal.prevItem"), gui.getKeyDisplay("universal.nextItem")): gui.Tr.SLocalize("navigate"),
+		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.return"), gui.getKeyDisplay("universal.quit")):                                                                                                 gui.Tr.SLocalize("close"),
+		fmt.Sprintf("%s", gui.getKeyDisplay("universal.optionMenu")):                                                                                                                                     gui.Tr.SLocalize("menu"),
+		"1-5": gui.Tr.SLocalize("jump"),
 	})
 }
 
@@ -780,6 +782,8 @@ func (gui *Gui) Run() error {
 		return err
 	}
 	defer g.Close()
+
+	g.ASCII = runtime.GOOS == "windows" && runewidth.IsEastAsian()
 
 	if gui.Config.GetUserConfig().GetBool("gui.mouseEvents") {
 		g.Mouse = true
@@ -835,7 +839,7 @@ func (gui *Gui) RunWithSubprocesses() error {
 					}
 				}
 
-				gui.fileWatcher.Close()
+				gui.fileWatcher.Watcher.Close()
 
 				break
 			} else if err == gui.Errors.ErrSwitchRepo {
