@@ -1,3 +1,88 @@
+lazygit (0.12.2) UNRELEASED; urgency=medium
+
+  [ Dawid Dziurla ]
+  * keybindings: alias V -> v
+
+  [ David Chen ]
+  * feature: custom keybindings
+  * update documentation for custom keybindings
+  * fix
+  * exmaple keybindings for colemak users
+  * included default config file path
+  * added all possible custom keybindings to the documentation
+  * better error handling
+  * bug fix: ctrl+combinations was not showing up in help menu
+
+  [ Jesse Duffield ]
+  * fix commit message char count
+  * allow fetching remotes with 'f'
+
+  [ David Chen ]
+  * suggested keybinding improvements
+  * better error messages
+  * updated docs/examples
+  * added keybinding for fetchRemote
+
+  [ Jesse Duffield ]
+  * stop the files panel from stealing focus whenever files are refreshed
+
+  [ David Chen ]
+  * re-position key names so that the menu will show 'enter' instead of 'ctrl-m', or 'esc' instead of 'ctrl-['
+
+  [ Artem Polishchuk ]
+  * Fedora installation instructions
+
+  [ Dawid Dziurla ]
+  * update dependencies
+  * README: update ubuntu info
+
+  [ matejcik ]
+  * make Ctrl+P visible
+
+  [ Jamie Brynes ]
+  * fix applying patch on Windows machine
+
+  [ Dawid Dziurla ]
+  * README: drop ubuntu daily
+
+  [ David Chen ]
+  * PickBothHunks -> pickBothHunks
+  * if statements to map
+  * updated keybinding config docs
+
+  [ Yasuhiro Matsumoto ]
+  * Use ASCII on Windows with east asian locale
+
+  [ Jesse Duffield ]
+  * allow hard resetting to upstream branch
+  * allow commits to be checked out
+
+  [ David Chen ]
+  * fixed keybinding display in merge_panel.go
+  * customizable keybinding for toggleDiffCommit
+  * cleanup
+  * fix display of menu option keybindings
+  * added a seperate keybinding option for checking out commits
+
+  [ Jesse Duffield ]
+  * improve file watching
+  * reduce to 50
+  * minor fixup
+  * don't watch deleted files
+  * add git flow support
+
+  [ Jamie Brynes ]
+  * escape editor path
+
+  [ Jesse Duffield ]
+  * refresh side panels when resetting to upstream
+  * update to new goreleaser schema
+
+  [ Dawid Dziurla ]
+  * add d/update.sh
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Wed, 08 Jan 2020 12:59:45 +0100
+
 lazygit (0.11.3-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
