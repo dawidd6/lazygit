@@ -1,4 +1,4 @@
-lazygit (0.12.2) xenial; urgency=medium
+lazygit (0.12.2-1) xenial; urgency=medium
 
   [ Dawid Dziurla ]
   * keybindings: alias V -> v
