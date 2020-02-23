@@ -1,3 +1,52 @@
+lazygit (0.14-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * lazyload commits
+  * allow fast flicking through any list panel
+  * keep track of current view when pushing
+  * use view line height to see if you should stop scrolling
+  * bump gocui
+  * reset origin when clicking on list item
+  * use mutexes on escape code
+  * Missed a spot with this new string task thing
+  * handle when fsnotify doesn't work
+
+  [ Jamie Brynes ]
+  * handle case where file watcher is disabled
+
+  [ Jesse Duffield ]
+  * use reflog timestamps rather than commit timestamps to show commit recency
+  * fix comment
+  * make use of branch config when pushing/pulling
+  * remove rollbar
+  * safely unstage lines
+  * split main view vertically
+  * handle files that were deleted downstream but modified upstream
+  * fix segfault on line by line panel
+  * fix keybinding issues with freebsd/openbsd
+
+  [ David Chen ]
+  * Update example config for Colemak Keyboard Layout users
+
+  [ Jesse Duffield ]
+  * close more things when switching repos or to a subprocess
+  * only rerender app status when we need to
+  * explicitly tell gocui when to start animating the loader
+  * bump vendor directory
+  * more ticker improvements
+  * bump gocui
+
+  [ Chris Taylor ]
+  * make amend more non-interactive
+  * perpetuate this style of dependency injection
+  * add a helper to search a list for a pattern
+  * verify that VISUAL,EDITOR,LGCC envvars are set for non-interactive commands
+
+  [ Dawid Dziurla ]
+  * d/update.sh set distribution
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Sun, 23 Feb 2020 12:09:20 +0100
+
 lazygit (0.13-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
