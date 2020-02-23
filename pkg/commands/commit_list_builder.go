@@ -190,7 +190,7 @@ func (c *CommitListBuilder) getInteractiveRebasingCommits() ([]*Commit, error) {
 		}
 		splitLine := strings.Split(line, " ")
 		commits = append([]*Commit{{
-			Sha:    splitLine[1][0:7],
+			Sha:    splitLine[1],
 			Name:   strings.Join(splitLine[2:], " "),
 			Status: "rebasing",
 			Action: splitLine[0],
@@ -207,7 +207,7 @@ func (c *CommitListBuilder) getInteractiveRebasingCommits() ([]*Commit, error) {
 // Subject: second commit on master
 func (c *CommitListBuilder) commitFromPatch(content string) (*Commit, error) {
 	lines := strings.Split(content, "\n")
-	sha := strings.Split(lines[0], " ")[1][0:7]
+	sha := strings.Split(lines[0], " ")[1]
 	name := strings.TrimPrefix(lines[3], "Subject: ")
 	return &Commit{
 		Sha:    sha,
@@ -288,8 +288,7 @@ func (c *CommitListBuilder) getLog(limit bool) string {
 		limitFlag = "-30"
 	}
 
-	c.Log.Warn(fmt.Sprintf("git log --oneline %s", limitFlag))
-	result, err := c.OSCommand.RunCommandWithOutput(fmt.Sprintf("git log --oneline %s", limitFlag))
+	result, err := c.OSCommand.RunCommandWithOutput(fmt.Sprintf("git log --oneline %s --abbrev=%d", limitFlag, 20))
 	if err != nil {
 		// assume if there is an error there are no commits yet for this branch
 		return ""

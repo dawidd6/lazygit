@@ -408,6 +408,11 @@ func (c *GitCommand) Pull(args string, ask func(string) string) error {
 	return c.OSCommand.DetectUnamePass("git pull --no-edit "+args, ask)
 }
 
+// PullWithoutPasswordCheck assumes that the pull will not prompt the user for a password
+func (c *GitCommand) PullWithoutPasswordCheck(args string) error {
+	return c.OSCommand.RunCommand("git pull --no-edit " + args)
+}
+
 // Push pushes to a branch
 func (c *GitCommand) Push(branchName string, force bool, upstream string, args string, ask func(string) string) error {
 	forceFlag := ""
@@ -592,7 +597,7 @@ func (c *GitCommand) DiffCmdStr(file *File, plain bool, cached bool) string {
 	if cached {
 		cachedArg = "--cached"
 	}
-	if !file.Tracked && !file.HasStagedChanges {
+	if !file.Tracked && !file.HasStagedChanges && !cached {
 		trackedArg = "--no-index /dev/null"
 	}
 	if plain {
@@ -938,6 +943,11 @@ func (c *GitCommand) DiscardOldFileChanges(commits []*Commit, commitIndex int, f
 // DiscardAnyUnstagedFileChanges discards any unstages file changes via `git checkout -- .`
 func (c *GitCommand) DiscardAnyUnstagedFileChanges() error {
 	return c.OSCommand.RunCommand("git checkout -- .")
+}
+
+// RemoveTrackedFiles will delete the given file(s) even if they are currently tracked
+func (c *GitCommand) RemoveTrackedFiles(name string) error {
+	return c.OSCommand.RunCommand("git rm -r --cached %s", name)
 }
 
 // RemoveUntrackedFiles runs `git clean -fd`

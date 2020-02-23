@@ -242,16 +242,29 @@ func (gui *Gui) handleStageAll(g *gocui.Gui, v *gocui.View) error {
 }
 
 func (gui *Gui) handleIgnoreFile(g *gocui.Gui, v *gocui.View) error {
-	file, err := gui.getSelectedFile(g)
+	file, err := gui.getSelectedFile(gui.g)
 	if err != nil {
-		return gui.createErrorPanel(g, err.Error())
+		return gui.createErrorPanel(gui.g, err.Error())
 	}
+
 	if file.Tracked {
-		return gui.createErrorPanel(g, gui.Tr.SLocalize("CantIgnoreTrackFiles"))
+		return gui.createConfirmationPanel(gui.g, gui.g.CurrentView(), true, gui.Tr.SLocalize("IgnoreTracked"), gui.Tr.SLocalize("IgnoreTrackedPrompt"),
+			// On confirmation
+			func(_ *gocui.Gui, _ *gocui.View) error {
+				if err := gui.GitCommand.Ignore(file.Name); err != nil {
+					return err
+				}
+				if err := gui.GitCommand.RemoveTrackedFiles(file.Name); err != nil {
+					return err
+				}
+				return gui.refreshFiles()
+			}, nil)
 	}
+
 	if err := gui.GitCommand.Ignore(file.Name); err != nil {
-		return gui.createErrorPanel(g, err.Error())
+		return gui.createErrorPanel(gui.g, err.Error())
 	}
+
 	return gui.refreshFiles()
 }
 
@@ -527,67 +540,6 @@ func (gui *Gui) anyFilesWithMergeConflicts() bool {
 	return false
 }
 
-type discardOption struct {
-	handler     func(fileName *commands.File) error
-	description string
-}
-
-// GetDisplayStrings is a function.
-func (r *discardOption) GetDisplayStrings(isFocused bool) []string {
-	return []string{r.description}
-}
-
-func (gui *Gui) handleCreateDiscardMenu(g *gocui.Gui, v *gocui.View) error {
-	file, err := gui.getSelectedFile(g)
-	if err != nil {
-		if err != gui.Errors.ErrNoFiles {
-			return err
-		}
-		return nil
-	}
-
-	options := []*discardOption{
-		{
-			description: gui.Tr.SLocalize("discardAllChanges"),
-			handler: func(file *commands.File) error {
-				return gui.GitCommand.DiscardAllFileChanges(file)
-			},
-		},
-		{
-			description: gui.Tr.SLocalize("cancel"),
-			handler: func(file *commands.File) error {
-				return nil
-			},
-		},
-	}
-
-	if file.HasStagedChanges && file.HasUnstagedChanges {
-		discardUnstagedChanges := &discardOption{
-			description: gui.Tr.SLocalize("discardUnstagedChanges"),
-			handler: func(file *commands.File) error {
-				return gui.GitCommand.DiscardUnstagedFileChanges(file)
-			},
-		}
-
-		options = append(options[:1], append([]*discardOption{discardUnstagedChanges}, options[1:]...)...)
-	}
-
-	handleMenuPress := func(index int) error {
-		file, err := gui.getSelectedFile(g)
-		if err != nil {
-			return err
-		}
-
-		if err := options[index].handler(file); err != nil {
-			return err
-		}
-
-		return gui.refreshFiles()
-	}
-
-	return gui.createMenu(file.Name, options, len(options), handleMenuPress)
-}
-
 func (gui *Gui) handleCustomCommand(g *gocui.Gui, v *gocui.View) error {
 	return gui.createPromptPanel(g, v, gui.Tr.SLocalize("CustomCommand"), "", func(g *gocui.Gui, v *gocui.View) error {
 		command := gui.trimmedContent(v)
@@ -596,45 +548,29 @@ func (gui *Gui) handleCustomCommand(g *gocui.Gui, v *gocui.View) error {
 	})
 }
 
-type stashOption struct {
-	description string
-	handler     func() error
-}
-
-// GetDisplayStrings is a function.
-func (o *stashOption) GetDisplayStrings(isFocused bool) []string {
-	return []string{o.description}
-}
-
 func (gui *Gui) handleCreateStashMenu(g *gocui.Gui, v *gocui.View) error {
-	options := []*stashOption{
+	menuItems := []*menuItem{
 		{
-			description: gui.Tr.SLocalize("stashAllChanges"),
-			handler: func() error {
+			displayString: gui.Tr.SLocalize("stashAllChanges"),
+			onPress: func() error {
 				return gui.handleStashSave(gui.GitCommand.StashSave)
 			},
 		},
 		{
-			description: gui.Tr.SLocalize("stashStagedChanges"),
-			handler: func() error {
+			displayString: gui.Tr.SLocalize("stashStagedChanges"),
+			onPress: func() error {
 				return gui.handleStashSave(gui.GitCommand.StashSaveStagedChanges)
 			},
 		},
-		{
-			description: gui.Tr.SLocalize("cancel"),
-			handler: func() error {
-				return nil
-			},
-		},
 	}
 
-	handleMenuPress := func(index int) error {
-		return options[index].handler()
-	}
-
-	return gui.createMenu(gui.Tr.SLocalize("stashOptions"), options, len(options), handleMenuPress)
+	return gui.createMenu(gui.Tr.SLocalize("stashOptions"), menuItems, createMenuOptions{showCancel: true})
 }
 
 func (gui *Gui) handleStashChanges(g *gocui.Gui, v *gocui.View) error {
 	return gui.handleStashSave(gui.GitCommand.StashSave)
+}
+
+func (gui *Gui) handleCreateResetToUpstreamMenu(g *gocui.Gui, v *gocui.View) error {
+	return gui.createResetMenu("@{upstream}")
 }

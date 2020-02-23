@@ -97,8 +97,7 @@ func (gui *Gui) refreshBranches(g *gocui.Gui) error {
 
 		// TODO: if we're in the remotes view and we've just deleted a remote we need to refresh accordingly
 		if gui.getBranchesView().Context == "local-branches" {
-			gui.refreshSelectedLine(&gui.State.Panels.Branches.SelectedLine, len(gui.State.Branches))
-			if err := gui.RenderSelectedBranchUpstreamDifferences(); err != nil {
+			if err := gui.renderLocalBranchesWithSelection(); err != nil {
 				return err
 			}
 		}
@@ -112,10 +111,10 @@ func (gui *Gui) renderLocalBranchesWithSelection() error {
 	branchesView := gui.getBranchesView()
 
 	gui.refreshSelectedLine(&gui.State.Panels.Branches.SelectedLine, len(gui.State.Branches))
-	if err := gui.renderListPanel(branchesView, gui.State.Branches); err != nil {
+	if err := gui.RenderSelectedBranchUpstreamDifferences(); err != nil {
 		return err
 	}
-	if gui.g.CurrentView() == branchesView && branchesView.Context == "local-branches" {
+	if gui.g.CurrentView() == branchesView {
 		if err := gui.handleBranchSelect(gui.g, branchesView); err != nil {
 			return err
 		}
@@ -373,12 +372,19 @@ func (gui *Gui) handleFastForward(g *gocui.Gui, v *gocui.View) error {
 	go func() {
 		_ = gui.createLoaderPanel(gui.g, v, message)
 
-		if err := gui.GitCommand.FastForward(branch.Name, remoteName, remoteBranchName); err != nil {
-			_ = gui.createErrorPanel(gui.g, err.Error())
+		if gui.State.Panels.Branches.SelectedLine == 0 {
+			if err := gui.GitCommand.PullWithoutPasswordCheck("--ff-only"); err != nil {
+				_ = gui.createErrorPanel(gui.g, err.Error())
+			}
+			_ = gui.refreshSidePanels(gui.g)
 		} else {
-			_ = gui.closeConfirmationPrompt(gui.g, true)
+			if err := gui.GitCommand.FastForward(branch.Name, remoteName, remoteBranchName); err != nil {
+				_ = gui.createErrorPanel(gui.g, err.Error())
+			}
 			_ = gui.RenderSelectedBranchUpstreamDifferences()
 		}
+
+		_ = gui.closeConfirmationPrompt(gui.g, true)
 	}()
 	return nil
 }
@@ -428,4 +434,13 @@ func (gui *Gui) handlePrevBranchesTab(g *gocui.Gui, v *gocui.View) error {
 	return gui.onBranchesTabClick(
 		utils.ModuloWithWrap(v.TabIndex-1, len(v.Tabs)),
 	)
+}
+
+func (gui *Gui) handleCreateResetToBranchMenu(g *gocui.Gui, v *gocui.View) error {
+	branch := gui.getSelectedBranch()
+	if branch == nil {
+		return nil
+	}
+
+	return gui.createResetMenu(branch.Name)
 }

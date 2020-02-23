@@ -8,6 +8,12 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
+type menuItem struct {
+	displayString  string
+	displayStrings []string
+	onPress        func() error
+}
+
 // list panel functions
 
 func (gui *Gui) handleMenuSelect(g *gocui.Gui, v *gocui.View) error {
@@ -38,13 +44,33 @@ func (gui *Gui) handleMenuClose(g *gocui.Gui, v *gocui.View) error {
 	return gui.returnFocus(g, v)
 }
 
-func (gui *Gui) createMenu(title string, items interface{}, itemCount int, handlePress func(int) error) error {
-	isFocused := gui.g.CurrentView().Name() == "menu"
-	gui.State.MenuItemCount = itemCount
-	list, err := utils.RenderList(items, isFocused)
-	if err != nil {
-		return err
+type createMenuOptions struct {
+	showCancel bool
+}
+
+func (gui *Gui) createMenu(title string, items []*menuItem, createMenuOptions createMenuOptions) error {
+	if createMenuOptions.showCancel {
+		// this is mutative but I'm okay with that for now
+		items = append(items, &menuItem{
+			displayStrings: []string{gui.Tr.SLocalize("cancel")},
+			onPress: func() error {
+				return nil
+			},
+		})
 	}
+
+	gui.State.MenuItemCount = len(items)
+
+	stringArrays := make([][]string, len(items))
+	for i, item := range items {
+		if item.displayStrings == nil {
+			stringArrays[i] = []string{item.displayString}
+		} else {
+			stringArrays[i] = item.displayStrings
+		}
+	}
+
+	list := utils.RenderDisplayStrings(stringArrays)
 
 	x0, y0, x1, y1 := gui.getConfirmationPanelDimensions(gui.g, false, list)
 	menuView, _ := gui.g.SetView("menu", x0, y0, x1, y1, 0)
@@ -56,9 +82,10 @@ func (gui *Gui) createMenu(title string, items interface{}, itemCount int, handl
 
 	wrappedHandlePress := func(g *gocui.Gui, v *gocui.View) error {
 		selectedLine := gui.State.Panels.Menu.SelectedLine
-		if err := handlePress(selectedLine); err != nil {
+		if err := items[selectedLine].onPress(); err != nil {
 			return err
 		}
+
 		if _, err := gui.g.View("menu"); err == nil {
 			if _, err := gui.g.SetViewOnBottom("menu"); err != nil {
 				return err
