@@ -1,0 +1,22 @@
+From e101bb2941d475f4feacea975605e5a8cc1dc568 Mon Sep 17 00:00:00 2001
+From: Dawid Dziurla <dawidd0811@gmail.com>
+Date: Sun, 23 Feb 2020 12:33:30 +0100
+Subject: [PATCH] tasks: don't use a function that requires Go 1.12
+
+---
+ pkg/tasks/tasks.go | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pkg/tasks/tasks.go b/pkg/tasks/tasks.go
+index e062b618..26846c43 100644
+--- a/pkg/tasks/tasks.go
++++ b/pkg/tasks/tasks.go
+@@ -59,7 +59,7 @@ func (m *ViewBufferManager) NewCmdTask(cmd *exec.Cmd, linesToRead int) func(chan
+ 
+ 		go func() {
+ 			<-stop
+-			if cmd.ProcessState.ExitCode() == -1 {
++			if cmd.ProcessState == nil {
+ 				if err := kill(cmd); err != nil {
+ 					m.Log.Warn(err)
+ 				}
