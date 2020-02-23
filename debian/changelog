@@ -1,3 +1,58 @@
+lazygit (0.14.4-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * correctly compare new main height to previous
+
+  [ Glenn Vriesman ]
+  * Check cached when showing new file diffs
+  * Added commit keybinding to staging views
+  * Added more keybinds
+
+  [ Marco Molteni ]
+  * doc: mention config file location for MacOS
+
+  [ Jesse Duffield ]
+  * fix goreleaser
+
+  [ Glenn Vriesman ]
+  * Added feature to ignore tracked files
+  * Moved function to git.go
+
+  [ Jesse Duffield ]
+  * ignore carriage returns
+
+  [ Glenn Vriesman ]
+  * Increase internal sha size
+  * Use 8 instead of 7 digit long sha
+  * Fixed tests
+
+  [ Jesse Duffield ]
+  * refresh current branch graph when side panels refresh
+  * get whole commit SHA from rebase commits
+  * begin refactor of menu panel
+  * continue refactor of menu panel
+  * refactor commit reset menu
+  * refactor workspace reset options panel
+  * refactor reflog reset options panel
+  * refactor recent repos menu panel
+  * refactor rebase menu panel
+  * refactor patch options menu panel
+  * refactor git flow menu
+  * refactor stash options menu
+  * remove old createMenu function
+  * fix specs
+  * refactor create reset menu logic
+  * allow resetting to branch
+  * allow resetting to remote branch
+  * allow resetting to tag
+  * add mixed option to HEAD resetting, remove @{upstream}
+  * add reset to upstream option on files panel
+  * add reset to reflog commit menu
+  * fix wording
+  * allow fastforwarding the current branch
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Sun, 23 Feb 2020 12:23:39 +0100
+
 lazygit (0.14-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
