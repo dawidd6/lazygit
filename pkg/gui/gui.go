@@ -25,6 +25,7 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
+	"github.com/jesseduffield/lazygit/pkg/tasks"
 	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/updates"
 	"github.com/jesseduffield/lazygit/pkg/utils"
@@ -68,20 +69,22 @@ type Teml i18n.Teml
 
 // Gui wraps the gocui Gui object which handles rendering and events
 type Gui struct {
-	g             *gocui.Gui
-	Log           *logrus.Entry
-	GitCommand    *commands.GitCommand
-	OSCommand     *commands.OSCommand
-	SubProcess    *exec.Cmd
-	State         guiState
-	Config        config.AppConfigurer
-	Tr            *i18n.Localizer
-	Errors        SentinelErrors
-	Updater       *updates.Updater
-	statusManager *statusManager
-	credentials   credentials
-	waitForIntro  sync.WaitGroup
-	fileWatcher   *fileWatcher
+	g                    *gocui.Gui
+	Log                  *logrus.Entry
+	GitCommand           *commands.GitCommand
+	OSCommand            *commands.OSCommand
+	SubProcess           *exec.Cmd
+	State                guiState
+	Config               config.AppConfigurer
+	Tr                   *i18n.Localizer
+	Errors               SentinelErrors
+	Updater              *updates.Updater
+	statusManager        *statusManager
+	credentials          credentials
+	waitForIntro         sync.WaitGroup
+	fileWatcher          *fileWatcher
+	viewBufferManagerMap map[string]*tasks.ViewBufferManager
+	stopChan             chan struct{}
 }
 
 // for now the staging panel state, unlike the other panel states, is going to be
@@ -128,6 +131,7 @@ type tagsPanelState struct {
 type commitPanelState struct {
 	SelectedLine     int
 	SpecificDiffMode bool
+	LimitCommits     bool
 }
 
 type reflogCommitPanelState struct {
@@ -212,7 +216,7 @@ func NewGui(log *logrus.Entry, gitCommand *commands.GitCommand, oSCommand *comma
 			Remotes:        &remotePanelState{SelectedLine: 0},
 			RemoteBranches: &remoteBranchesState{SelectedLine: -1},
 			Tags:           &tagsPanelState{SelectedLine: -1},
-			Commits:        &commitPanelState{SelectedLine: -1},
+			Commits:        &commitPanelState{SelectedLine: -1, LimitCommits: true},
 			ReflogCommits:  &reflogCommitPanelState{SelectedLine: 0}, // TODO: might need to make -1
 			CommitFiles:    &commitFilesPanelState{SelectedLine: -1},
 			Stash:          &stashPanelState{SelectedLine: -1},
@@ -228,14 +232,15 @@ func NewGui(log *logrus.Entry, gitCommand *commands.GitCommand, oSCommand *comma
 	}
 
 	gui := &Gui{
-		Log:           log,
-		GitCommand:    gitCommand,
-		OSCommand:     oSCommand,
-		State:         initialState,
-		Config:        config,
-		Tr:            tr,
-		Updater:       updater,
-		statusManager: &statusManager{},
+		Log:                  log,
+		GitCommand:           gitCommand,
+		OSCommand:            oSCommand,
+		State:                initialState,
+		Config:               config,
+		Tr:                   tr,
+		Updater:              updater,
+		statusManager:        &statusManager{},
+		viewBufferManagerMap: map[string]*tasks.ViewBufferManager{},
 	}
 
 	gui.watchFilesForChanges()
@@ -260,8 +265,14 @@ func (gui *Gui) scrollDownView(viewName string) error {
 		_, sy := mainView.Size()
 		y += sy
 	}
-	if y < len(mainView.BufferLines()) {
-		return mainView.SetOrigin(ox, oy+gui.Config.GetUserConfig().GetInt("gui.scrollHeight"))
+	scrollHeight := gui.Config.GetUserConfig().GetInt("gui.scrollHeight")
+	if y < mainView.LinesHeight() {
+		if err := mainView.SetOrigin(ox, oy+scrollHeight); err != nil {
+			return err
+		}
+	}
+	if manager, ok := gui.viewBufferManagerMap[viewName]; ok {
+		manager.ReadLines(scrollHeight)
 	}
 	return nil
 }
@@ -338,9 +349,7 @@ func (gui *Gui) onFocusLost(v *gocui.View, newView *gocui.View) error {
 		}
 	case "main":
 		// if we have lost focus to a first-class panel, we need to do some cleanup
-		if err := gui.changeMainViewsContext("normal"); err != nil {
-			return err
-		}
+		gui.changeMainViewsContext("normal")
 	case "commitFiles":
 		if gui.State.MainContext != "patch-building" {
 			if _, err := gui.g.SetViewOnBottom(v.Name()); err != nil {
@@ -450,10 +459,22 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	textColor := theme.GocuiDefaultTextColor
 	leftSideWidth := width / 3
 	panelSplitX := width - 1
+	mainPanelRight := width - 1
+	secondaryPanelLeft := width - 1
+	secondaryPanelTop := 0
+	mainPanelBottom := height - 2
 	if gui.State.SplitMainPanel {
-		units := 7
-		leftSideWidth = width / units
-		panelSplitX = (1 + ((units - 1) / 2)) * width / units
+		if width < 220 {
+			mainPanelBottom = height/2 - 1
+			secondaryPanelTop = mainPanelBottom + 1
+			secondaryPanelLeft = leftSideWidth + 1
+		} else {
+			units := 5
+			leftSideWidth = width / units
+			panelSplitX = (1 + ((units - 1) / 2)) * width / units
+			mainPanelRight = panelSplitX
+			secondaryPanelLeft = panelSplitX + 1
+		}
 	}
 
 	main := "main"
@@ -464,7 +485,22 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		secondary = "main"
 	}
 
-	v, err := g.SetView(main, leftSideWidth+panelSpacing, 0, panelSplitX, height-2, gocui.LEFT)
+	// reading more lines into main view buffers upon resize
+	prevMainView, err := gui.g.View("main")
+	if err == nil {
+		_, prevMainHeight := prevMainView.Size()
+		heightDiff := mainPanelBottom - prevMainHeight
+		if heightDiff > 0 {
+			if manager, ok := gui.viewBufferManagerMap["main"]; ok {
+				manager.ReadLines(heightDiff)
+			}
+			if manager, ok := gui.viewBufferManagerMap["secondary"]; ok {
+				manager.ReadLines(heightDiff)
+			}
+		}
+	}
+
+	v, err := g.SetView(main, leftSideWidth+panelSpacing, 0, mainPanelRight, mainPanelBottom, gocui.LEFT)
 	if err != nil {
 		if err.Error() != "unknown view" {
 			return err
@@ -478,7 +514,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	if !gui.State.SplitMainPanel {
 		hiddenViewOffset = 9999
 	}
-	secondaryView, err := g.SetView(secondary, panelSplitX+1+hiddenViewOffset, hiddenViewOffset, width-1+hiddenViewOffset, height-2+hiddenViewOffset, gocui.LEFT)
+	secondaryView, err := g.SetView(secondary, secondaryPanelLeft+hiddenViewOffset, hiddenViewOffset+secondaryPanelTop, width-1+hiddenViewOffset, height-2+hiddenViewOffset, gocui.LEFT)
 	if err != nil {
 		if err.Error() != "unknown view" {
 			return err
@@ -554,7 +590,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 
 	if gui.getCommitMessageView() == nil {
 		// doesn't matter where this view starts because it will be hidden
-		if commitMessageView, err := g.SetView("commitMessage", width, height, width*2, height*2, 0); err != nil {
+		if commitMessageView, err := g.SetView("commitMessage", hiddenViewOffset, hiddenViewOffset, hiddenViewOffset+10, hiddenViewOffset+10, 0); err != nil {
 			if err.Error() != "unknown view" {
 				return err
 			}
@@ -568,7 +604,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 
 	if check, _ := g.View("credentials"); check == nil {
 		// doesn't matter where this view starts because it will be hidden
-		if credentialsView, err := g.SetView("credentials", width, height, width*2, height*2, 0); err != nil {
+		if credentialsView, err := g.SetView("credentials", hiddenViewOffset, hiddenViewOffset, hiddenViewOffset+10, hiddenViewOffset+10, 0); err != nil {
 			if err.Error() != "unknown view" {
 				return err
 			}
@@ -661,9 +697,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 }
 
 func (gui *Gui) onInitialViewsCreation() error {
-	if err := gui.changeMainViewsContext("normal"); err != nil {
-		return err
-	}
+	gui.changeMainViewsContext("normal")
 
 	gui.getBranchesView().Context = "local-branches"
 	gui.getCommitsView().Context = "branch-commits"
@@ -742,14 +776,6 @@ func (gui *Gui) fetch(g *gocui.Gui, v *gocui.View, canAskForCredentials bool) (u
 	return unamePassOpend, err
 }
 
-func (gui *Gui) renderAppStatus() error {
-	appStatus := gui.statusManager.getStatusString()
-	if appStatus != "" {
-		return gui.renderString(gui.g, "appStatus", appStatus)
-	}
-	return nil
-}
-
 func (gui *Gui) renderGlobalOptions() error {
 	return gui.renderOptionsMap(map[string]string{
 		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.scrollUpMain"), gui.getKeyDisplay("universal.scrollDownMain")):                                                                                 gui.Tr.SLocalize("scroll"),
@@ -760,10 +786,17 @@ func (gui *Gui) renderGlobalOptions() error {
 	})
 }
 
-func (gui *Gui) goEvery(interval time.Duration, function func() error) {
+func (gui *Gui) goEvery(interval time.Duration, stop chan struct{}, function func() error) {
 	go func() {
-		for range time.Tick(interval) {
-			_ = function()
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				_ = function()
+			case <-stop:
+				return
+			}
 		}
 	}()
 }
@@ -778,7 +811,7 @@ func (gui *Gui) startBackgroundFetch() {
 	if err != nil && strings.Contains(err.Error(), "exit status 128") && isNew {
 		_ = gui.createConfirmationPanel(gui.g, gui.g.CurrentView(), true, gui.Tr.SLocalize("NoAutomaticGitFetchTitle"), gui.Tr.SLocalize("NoAutomaticGitFetchBody"), nil, nil)
 	} else {
-		gui.goEvery(time.Second*60, func() error {
+		gui.goEvery(time.Second*60, gui.stopChan, func() error {
 			_, err := gui.fetch(gui.g, gui.g.CurrentView(), false)
 			return err
 		})
@@ -792,6 +825,7 @@ func (gui *Gui) Run() error {
 		return err
 	}
 	defer g.Close()
+	gui.stopChan = make(chan struct{})
 
 	g.ASCII = runtime.GOOS == "windows" && runewidth.IsEastAsian()
 
@@ -821,8 +855,7 @@ func (gui *Gui) Run() error {
 		go gui.startBackgroundFetch()
 	}
 
-	gui.goEvery(time.Second*10, gui.refreshFiles)
-	gui.goEvery(time.Millisecond*50, gui.renderAppStatus)
+	gui.goEvery(time.Second*10, gui.stopChan, gui.refreshFiles)
 
 	g.SetManager(gocui.ManagerFunc(gui.layout), gocui.ManagerFunc(gui.getFocusLayout()))
 
@@ -842,14 +875,23 @@ func (gui *Gui) Run() error {
 func (gui *Gui) RunWithSubprocesses() error {
 	for {
 		if err := gui.Run(); err != nil {
+			for _, manager := range gui.viewBufferManagerMap {
+				manager.Close()
+			}
+			gui.viewBufferManagerMap = map[string]*tasks.ViewBufferManager{}
+
+			if !gui.fileWatcher.Disabled {
+				gui.fileWatcher.Watcher.Close()
+			}
+
+			close(gui.stopChan)
+
 			if err == gocui.ErrQuit {
 				if !gui.State.RetainOriginalDir {
 					if err := gui.recordCurrentDirectory(); err != nil {
 						return err
 					}
 				}
-
-				gui.fileWatcher.Watcher.Close()
 
 				break
 			} else if err == gui.Errors.ErrSwitchRepo {

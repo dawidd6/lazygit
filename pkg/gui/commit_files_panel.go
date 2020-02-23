@@ -29,7 +29,9 @@ func (gui *Gui) handleCommitFileSelect(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	gui.getMainView().Title = "Patch"
-	gui.State.Panels.LineByLine = nil
+	if gui.currentViewName() == "commitFiles" {
+		gui.handleEscapeLineByLinePanel()
+	}
 
 	commitFile := gui.getSelectedCommitFile(g)
 	if commitFile == nil {
@@ -43,11 +45,15 @@ func (gui *Gui) handleCommitFileSelect(g *gocui.Gui, v *gocui.View) error {
 	if err := gui.focusPoint(0, gui.State.Panels.CommitFiles.SelectedLine, len(gui.State.CommitFiles), v); err != nil {
 		return err
 	}
-	commitText, err := gui.GitCommand.ShowCommitFile(commitFile.Sha, commitFile.Name, false)
-	if err != nil {
-		return err
+
+	cmd := gui.OSCommand.ExecutableFromString(
+		gui.GitCommand.ShowCommitFileCmdStr(commitFile.Sha, commitFile.Name, false),
+	)
+	if err := gui.newCmdTask("main", cmd); err != nil {
+		gui.Log.Error(err)
 	}
-	return gui.renderString(g, "main", commitText)
+
+	return nil
 }
 
 func (gui *Gui) handleSwitchToCommitsPanel(g *gocui.Gui, v *gocui.View) error {
@@ -190,9 +196,7 @@ func (gui *Gui) enterCommitFile(selectedLineIdx int) error {
 			}
 		}
 
-		if err := gui.changeMainViewsContext("patch-building"); err != nil {
-			return err
-		}
+		gui.changeMainViewsContext("patch-building")
 		if err := gui.switchFocus(gui.g, gui.getCommitFilesView(), gui.getMainView()); err != nil {
 			return err
 		}

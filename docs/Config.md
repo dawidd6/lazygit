@@ -21,6 +21,7 @@ Default path for the config file: `~/.config/jesseduffield/lazygit/config.yml`
     commitLength:
       show: true
     mouseEvents: true
+    skipUnstageLineWarning: false
   git:
     merging:
       # only applicable to unix users
@@ -196,7 +197,7 @@ If you have issues with a light terminal theme where you can't read / see the te
 ![border example](/docs/resources/colored-border-example.png)
 
 ## Keybindings:
-For all possible keybinding options, check [Custom_Keybinding.md](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybinding.md) <++>
+For all possible keybinding options, check [Custom_Keybinding.md](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybinding.md)
 
 
 #### Example Keybindings For Colemak Users:
@@ -219,5 +220,8 @@ For all possible keybinding options, check [Custom_Keybinding.md](https://github
     commits:
       moveDownCommit: '<c-e>'
       moveUpCommit: '<c-u>'
+      toggleDiffCommit: 'l'
+    branches:
+      viewGitFlowOptions: 'I'
 ```
 

@@ -176,8 +176,8 @@ func stashEntryFromLine(line string, index int) *StashEntry {
 }
 
 // GetStashEntryDiff stash diff
-func (c *GitCommand) GetStashEntryDiff(index int) (string, error) {
-	return c.OSCommand.RunCommandWithOutput("git stash show -p --color stash@{%d}", index)
+func (c *GitCommand) ShowStashEntryCmdStr(index int) string {
+	return fmt.Sprintf("git stash show -p --color stash@{%d}", index)
 }
 
 // GetStatusFiles git status files
@@ -191,10 +191,10 @@ func (c *GitCommand) GetStatusFiles() []*File {
 		stagedChange := change[0:1]
 		unstagedChange := statusString[1:2]
 		filename := c.OSCommand.Unquote(statusString[3:])
-		_, untracked := map[string]bool{"??": true, "A ": true, "AM": true}[change]
-		_, hasNoStagedChanges := map[string]bool{" ": true, "U": true, "?": true}[stagedChange]
-		hasMergeConflicts := change == "UU" || change == "AA" || change == "DU"
-		hasInlineMergeConflicts := change == "UU" || change == "AA"
+		untracked := utils.IncludesString([]string{"??", "A ", "AM"}, change)
+		hasNoStagedChanges := utils.IncludesString([]string{" ", "U", "?"}, stagedChange)
+		hasMergeConflicts := utils.IncludesString([]string{"DD", "AA", "UU", "AU", "UA", "UD", "DU"}, change)
+		hasInlineMergeConflicts := utils.IncludesString([]string{"UU", "AA"}, change)
 
 		file := &File{
 			Name:                    filename,
@@ -404,12 +404,12 @@ func (c *GitCommand) AmendHead() (*exec.Cmd, error) {
 }
 
 // Pull pulls from repo
-func (c *GitCommand) Pull(ask func(string) string) error {
-	return c.OSCommand.DetectUnamePass("git pull --no-edit", ask)
+func (c *GitCommand) Pull(args string, ask func(string) string) error {
+	return c.OSCommand.DetectUnamePass("git pull --no-edit "+args, ask)
 }
 
 // Push pushes to a branch
-func (c *GitCommand) Push(branchName string, force bool, upstream string, ask func(string) string) error {
+func (c *GitCommand) Push(branchName string, force bool, upstream string, args string, ask func(string) string) error {
 	forceFlag := ""
 	if force {
 		forceFlag = "--force-with-lease"
@@ -420,7 +420,7 @@ func (c *GitCommand) Push(branchName string, force bool, upstream string, ask fu
 		setUpstreamArg = "--set-upstream " + upstream
 	}
 
-	cmd := fmt.Sprintf("git push --follow-tags %s %s", forceFlag, setUpstreamArg)
+	cmd := fmt.Sprintf("git push --follow-tags %s %s %s", forceFlag, setUpstreamArg, args)
 	return c.OSCommand.DetectUnamePass(cmd, ask)
 }
 
@@ -538,7 +538,8 @@ func (c *GitCommand) PrepareCommitAmendSubProcess() *exec.Cmd {
 // Currently it limits the result to 100 commits, but when we get async stuff
 // working we can do lazy loading
 func (c *GitCommand) GetBranchGraph(branchName string) (string, error) {
-	return c.OSCommand.RunCommandWithOutput("git log --graph --color --abbrev-commit --decorate --date=relative --pretty=medium -100 %s", branchName)
+	cmdStr := c.GetBranchGraphCmdStr(branchName)
+	return c.OSCommand.RunCommandWithOutput(cmdStr)
 }
 
 func (c *GitCommand) GetUpstreamForBranch(branchName string) (string, error) {
@@ -551,41 +552,12 @@ func (c *GitCommand) Ignore(filename string) error {
 	return c.OSCommand.AppendLineToFile(".gitignore", filename)
 }
 
-// Show shows the diff of a commit
-func (c *GitCommand) Show(sha string) (string, error) {
-	show, err := c.OSCommand.RunCommandWithOutput("git show --color --no-renames %s", sha)
-	if err != nil {
-		return "", err
-	}
+func (c *GitCommand) ShowCmdStr(sha string) string {
+	return fmt.Sprintf("git show --color --no-renames %s", sha)
+}
 
-	// if this is a merge commit, we need to go a step further and get the diff between the two branches we merged
-	revList, err := c.OSCommand.RunCommandWithOutput("git rev-list -1 --merges %s^...%s", sha, sha)
-	if err != nil {
-		// turns out we get an error here when it's the first commit. We'll just return the original show
-		return show, nil
-	}
-	if len(revList) == 0 {
-		return show, nil
-	}
-
-	// we want to pull out 1a6a69a and 3b51d7c from this:
-	// commit ccc771d8b13d5b0d4635db4463556366470fd4f6
-	// Merge: 1a6a69a 3b51d7c
-	lines := utils.SplitLines(show)
-	if len(lines) < 2 {
-		return show, nil
-	}
-
-	secondLineWords := strings.Split(lines[1], " ")
-	if len(secondLineWords) < 3 {
-		return show, nil
-	}
-
-	mergeDiff, err := c.OSCommand.RunCommandWithOutput("git diff --color %s...%s", secondLineWords[1], secondLineWords[2])
-	if err != nil {
-		return "", err
-	}
-	return show + mergeDiff, nil
+func (c *GitCommand) GetBranchGraphCmdStr(branchName string) string {
+	return fmt.Sprintf("git log --graph --color --abbrev-commit --decorate --date=relative --pretty=medium %s", branchName)
 }
 
 // GetRemoteURL returns current repo remote url
@@ -606,6 +578,12 @@ func (c *GitCommand) CheckRemoteBranchExists(branch *Branch) bool {
 
 // Diff returns the diff of a file
 func (c *GitCommand) Diff(file *File, plain bool, cached bool) string {
+	// for now we assume an error means the file was deleted
+	s, _ := c.OSCommand.RunCommandWithOutput(c.DiffCmdStr(file, plain, cached))
+	return s
+}
+
+func (c *GitCommand) DiffCmdStr(file *File, plain bool, cached bool) string {
 	cachedArg := ""
 	trackedArg := "--"
 	colorArg := "--color"
@@ -621,9 +599,7 @@ func (c *GitCommand) Diff(file *File, plain bool, cached bool) string {
 		colorArg = ""
 	}
 
-	// for now we assume an error means the file was deleted
-	s, _ := c.OSCommand.RunCommandWithOutput("git diff %s %s %s %s", colorArg, cachedArg, trackedArg, fileName)
-	return s
+	return fmt.Sprintf("git diff %s %s %s %s", colorArg, cachedArg, trackedArg, fileName)
 }
 
 func (c *GitCommand) ApplyPatch(patch string, flags ...string) error {
@@ -647,10 +623,12 @@ func (c *GitCommand) FastForward(branchName string, remoteName string, remoteBra
 
 func (c *GitCommand) RunSkipEditorCommand(command string) error {
 	cmd := c.OSCommand.ExecutableFromString(command)
+	lazyGitPath := c.OSCommand.GetLazygitPath()
 	cmd.Env = append(
 		cmd.Env,
 		"LAZYGIT_CLIENT_COMMAND=EXIT_IMMEDIATELY",
-		"EDITOR="+c.OSCommand.GetLazygitPath(),
+		"EDITOR="+lazyGitPath,
+		"VISUAL="+lazyGitPath,
 	)
 	return c.OSCommand.RunExecutable(cmd)
 }
@@ -908,11 +886,17 @@ func (c *GitCommand) GetCommitFiles(commitSha string, patchManager *PatchManager
 
 // ShowCommitFile get the diff of specified commit file
 func (c *GitCommand) ShowCommitFile(commitSha, fileName string, plain bool) (string, error) {
+	cmdStr := c.ShowCommitFileCmdStr(commitSha, fileName, plain)
+	return c.OSCommand.RunCommandWithOutput(cmdStr)
+}
+
+func (c *GitCommand) ShowCommitFileCmdStr(commitSha, fileName string, plain bool) string {
 	colorArg := "--color"
 	if plain {
 		colorArg = ""
 	}
-	return c.OSCommand.RunCommandWithOutput("git show --no-renames %s %s -- %s", colorArg, commitSha, fileName)
+
+	return fmt.Sprintf("git show --no-renames %s %s -- %s", colorArg, commitSha, fileName)
 }
 
 // CheckoutFile checks out the file for the given commit
@@ -1096,10 +1080,6 @@ func (c *GitCommand) UpdateRemoteUrl(remoteName string, updatedUrl string) error
 
 func (c *GitCommand) CreateLightweightTag(tagName string, commitSha string) error {
 	return c.OSCommand.RunCommand("git tag %s %s", tagName, commitSha)
-}
-
-func (c *GitCommand) ShowTag(tagName string) (string, error) {
-	return c.OSCommand.RunCommandWithOutput("git tag -n99 %s", tagName)
 }
 
 func (c *GitCommand) DeleteTag(tagName string) error {

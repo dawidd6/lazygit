@@ -11,15 +11,15 @@ require (
 	github.com/golang/protobuf v1.3.2 // indirect
 	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/integrii/flaggy v1.4.0
-	github.com/jesseduffield/gocui v0.3.1-0.20191116013947-b13bda319532
+	github.com/jesseduffield/gocui v0.3.1-0.20200201013258-57fdcf23edc5
 	github.com/jesseduffield/pty v1.2.1
-	github.com/jesseduffield/rollrus v0.0.0-20190701125922-dd028cb0bfd7
-	github.com/jesseduffield/termbox-go v0.0.0-20190630083001-9dd53af7214e // indirect
+	github.com/jesseduffield/rollrus v0.0.0-20190701125922-dd028cb0bfd7 // indirect
+	github.com/jesseduffield/termbox-go v0.0.0-20200130214842-1d31d1faa3c9 // indirect
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
-	github.com/mattn/go-runewidth v0.0.7
+	github.com/mattn/go-runewidth v0.0.8
 	github.com/mgutz/str v1.2.0
 	github.com/nicksnyder/go-i18n/v2 v2.0.3
 	github.com/onsi/ginkgo v1.10.3 // indirect

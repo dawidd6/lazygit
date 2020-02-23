@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"testing"
 	"time"
 
@@ -316,21 +317,6 @@ func TestGitCommandGetStashEntries(t *testing.T) {
 			s.test(gitCmd.GetStashEntries())
 		})
 	}
-}
-
-// TestGitCommandGetStashEntryDiff is a function.
-func TestGitCommandGetStashEntryDiff(t *testing.T) {
-	gitCmd := NewDummyGitCommand()
-	gitCmd.OSCommand.command = func(cmd string, args ...string) *exec.Cmd {
-		assert.EqualValues(t, "git", cmd)
-		assert.EqualValues(t, []string{"stash", "show", "-p", "--color", "stash@{1}"}, args)
-
-		return exec.Command("echo")
-	}
-
-	_, err := gitCmd.GetStashEntryDiff(1)
-
-	assert.NoError(t, err)
 }
 
 // TestGitCommandGetStatusFiles is a function.
@@ -1030,7 +1016,7 @@ func TestGitCommandPush(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
-			err := gitCmd.Push("test", s.forcePush, "", func(passOrUname string) string {
+			err := gitCmd.Push("test", s.forcePush, "", "", func(passOrUname string) string {
 				return "\n"
 			})
 			s.test(err)
@@ -1411,66 +1397,6 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 	}
 }
 
-// TestGitCommandShow is a function.
-func TestGitCommandShow(t *testing.T) {
-	type scenario struct {
-		testName string
-		arg      string
-		command  func(string, ...string) *exec.Cmd
-		test     func(string, error)
-	}
-
-	scenarios := []scenario{
-		{
-			"regular commit",
-			"456abcde",
-			test.CreateMockCommand(t, []*test.CommandSwapper{
-				{
-					Expect:  "git show --color --no-renames 456abcde",
-					Replace: "echo \"commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nblah\"",
-				},
-				{
-					Expect:  "git rev-list -1 --merges 456abcde^...456abcde",
-					Replace: "echo",
-				},
-			}),
-			func(result string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nblah\n", result)
-			},
-		},
-		{
-			"merge commit",
-			"456abcde",
-			test.CreateMockCommand(t, []*test.CommandSwapper{
-				{
-					Expect:  "git show --color --no-renames 456abcde",
-					Replace: "echo \"commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nMerge: 1a6a69a 3b51d7c\"",
-				},
-				{
-					Expect:  "git rev-list -1 --merges 456abcde^...456abcde",
-					Replace: "echo aa30e006433628ba9281652952b34d8aacda9c01",
-				},
-				{
-					Expect:  "git diff --color 1a6a69a...3b51d7c",
-					Replace: "echo blah",
-				},
-			}),
-			func(result string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "commit ccc771d8b13d5b0d4635db4463556366470fd4f6\nMerge: 1a6a69a 3b51d7c\nblah\n", result)
-			},
-		},
-	}
-
-	gitCmd := NewDummyGitCommand()
-
-	for _, s := range scenarios {
-		gitCmd.OSCommand.command = s.command
-		s.test(gitCmd.Show(s.arg))
-	}
-}
-
 // TestGitCommandCheckout is a function.
 func TestGitCommandCheckout(t *testing.T) {
 	type scenario struct {
@@ -1523,7 +1449,7 @@ func TestGitCommandGetBranchGraph(t *testing.T) {
 	gitCmd := NewDummyGitCommand()
 	gitCmd.OSCommand.command = func(cmd string, args ...string) *exec.Cmd {
 		assert.EqualValues(t, "git", cmd)
-		assert.EqualValues(t, []string{"log", "--graph", "--color", "--abbrev-commit", "--decorate", "--date=relative", "--pretty=medium", "-100", "test"}, args)
+		assert.EqualValues(t, []string{"log", "--graph", "--color", "--abbrev-commit", "--decorate", "--date=relative", "--pretty=medium", "test"}, args)
 
 		return exec.Command("echo")
 	}
@@ -2174,6 +2100,37 @@ func TestGitCommandCreateFixupCommit(t *testing.T) {
 			s.test(gitCmd.CreateFixupCommit(s.sha))
 		})
 	}
+}
+
+// TestGitCommandSkipEditorCommand confirms that SkipEditorCommand injects
+// environment variables that suppress an interactive editor
+func TestGitCommandSkipEditorCommand(t *testing.T) {
+	cmd := NewDummyGitCommand()
+
+	cmd.OSCommand.SetBeforeExecuteCmd(func(cmd *exec.Cmd) {
+		test.AssertContainsMatch(
+			t,
+			cmd.Env,
+			regexp.MustCompile("^VISUAL="),
+			"expected VISUAL to be set for a non-interactive external command",
+		)
+
+		test.AssertContainsMatch(
+			t,
+			cmd.Env,
+			regexp.MustCompile("^EDITOR="),
+			"expected EDITOR to be set for a non-interactive external command",
+		)
+
+		test.AssertContainsMatch(
+			t,
+			cmd.Env,
+			regexp.MustCompile("^LAZYGIT_CLIENT_COMMAND=EXIT_IMMEDIATELY$"),
+			"expected LAZYGIT_CLIENT_COMMAND to be set for a non-interactive external command",
+		)
+	})
+
+	cmd.RunSkipEditorCommand("true")
 }
 
 func TestFindDotGitDir(t *testing.T) {

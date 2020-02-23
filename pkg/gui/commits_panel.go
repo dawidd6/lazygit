@@ -37,13 +37,23 @@ func (gui *Gui) handleCommitSelect(g *gocui.Gui, v *gocui.View) error {
 		return err
 	}
 
+	state := gui.State.Panels.Commits
+	if state.SelectedLine > 20 && state.LimitCommits {
+		state.LimitCommits = false
+		go func() {
+			if err := gui.refreshCommitsWithLimit(); err != nil {
+				_ = gui.createErrorPanel(gui.g, err.Error())
+			}
+		}()
+	}
+
 	gui.getMainView().Title = "Patch"
 	gui.getSecondaryView().Title = "Custom Patch"
-	gui.State.Panels.LineByLine = nil
+	gui.handleEscapeLineByLinePanel()
 
 	commit := gui.getSelectedCommit(g)
 	if commit == nil {
-		return gui.renderString(g, "main", gui.Tr.SLocalize("NoCommitsThisBranch"))
+		return gui.newStringTask("main", gui.Tr.SLocalize("NoCommitsThisBranch"))
 	}
 
 	if err := gui.focusPoint(0, gui.State.Panels.Commits.SelectedLine, len(gui.State.Commits), v); err != nil {
@@ -55,24 +65,24 @@ func (gui *Gui) handleCommitSelect(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	}
 
-	commitText, err := gui.GitCommand.Show(commit.Sha)
-	if err != nil {
-		return err
+	cmd := gui.OSCommand.ExecutableFromString(
+		gui.GitCommand.ShowCmdStr(commit.Sha),
+	)
+	if err := gui.newCmdTask("main", cmd); err != nil {
+		gui.Log.Error(err)
 	}
-	return gui.renderString(g, "main", commitText)
+
+	return nil
 }
 
 func (gui *Gui) refreshCommits(g *gocui.Gui) error {
 	g.Update(func(*gocui.Gui) error {
-		builder, err := commands.NewCommitListBuilder(gui.Log, gui.GitCommand, gui.OSCommand, gui.Tr, gui.State.CherryPickedCommits, gui.State.DiffEntries)
-		if err != nil {
+		// I think this is here for the sake of some kind of rebasing thing
+		gui.refreshStatus(g)
+
+		if err := gui.refreshCommitsWithLimit(); err != nil {
 			return err
 		}
-		commits, err := builder.GetCommits()
-		if err != nil {
-			return err
-		}
-		gui.State.Commits = commits
 
 		// doing this async because it shouldn't hold anything up
 		go func() {
@@ -81,17 +91,32 @@ func (gui *Gui) refreshCommits(g *gocui.Gui) error {
 			}
 		}()
 
-		gui.refreshStatus(g)
-		if gui.getCommitsView().Context == "branch-commits" {
-			if err := gui.renderBranchCommitsWithSelection(); err != nil {
-				return err
-			}
-		}
 		if g.CurrentView() == gui.getCommitFilesView() || (g.CurrentView() == gui.getMainView() || gui.State.MainContext == "patch-building") {
 			return gui.refreshCommitFilesView()
 		}
 		return nil
 	})
+	return nil
+}
+
+func (gui *Gui) refreshCommitsWithLimit() error {
+	builder, err := commands.NewCommitListBuilder(gui.Log, gui.GitCommand, gui.OSCommand, gui.Tr, gui.State.CherryPickedCommits, gui.State.DiffEntries)
+	if err != nil {
+		return err
+	}
+
+	commits, err := builder.GetCommits(gui.State.Panels.Commits.LimitCommits)
+	if err != nil {
+		return err
+	}
+	gui.State.Commits = commits
+
+	if gui.getCommitsView().Context == "branch-commits" {
+		if err := gui.renderBranchCommitsWithSelection(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -441,7 +466,7 @@ func (gui *Gui) handleToggleDiffCommit(g *gocui.Gui, v *gocui.View) error {
 	// get selected commit
 	commit := gui.getSelectedCommit(g)
 	if commit == nil {
-		return gui.renderString(g, "main", gui.Tr.SLocalize("NoCommitsThisBranch"))
+		return gui.newStringTask("main", gui.Tr.SLocalize("NoCommitsThisBranch"))
 	}
 
 	// if already selected commit delete
@@ -464,7 +489,7 @@ func (gui *Gui) handleToggleDiffCommit(g *gocui.Gui, v *gocui.View) error {
 			return gui.createErrorPanel(gui.g, err.Error())
 		}
 
-		return gui.renderString(g, "main", commitText)
+		return gui.newStringTask("main", commitText)
 	}
 
 	return nil
