@@ -1,3 +1,27 @@
+lazygit (0.15.2-1) xenial; urgency=medium
+
+  [ Glenn Vriesman ]
+  * Reflog: Use 20 sha digits instead of 7
+
+  [ Jesse Duffield ]
+  * allow customizing background color in staging mode
+
+  [ Dawid Dziurla ]
+  * tasks: don't use a function that requires Go 1.12
+
+  [ Jesse Duffield ]
+  * show diff stat
+  * switch custom command keybinding to ':'
+  * support searching in side panels
+  * eagerload commits when searching
+  * better handling of clearing the search
+  * show tags in commits panel
+  * show item counts in frames
+  * add half and fullscreen modes
+  * refresh commits when adding a tag
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Mon, 24 Feb 2020 23:37:11 +0100
+
 lazygit (0.14.4-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
