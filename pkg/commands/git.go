@@ -558,7 +558,7 @@ func (c *GitCommand) Ignore(filename string) error {
 }
 
 func (c *GitCommand) ShowCmdStr(sha string) string {
-	return fmt.Sprintf("git show --color --no-renames %s", sha)
+	return fmt.Sprintf("git show --color --no-renames --stat -p %s", sha)
 }
 
 func (c *GitCommand) GetBranchGraphCmdStr(branchName string) string {
@@ -604,7 +604,7 @@ func (c *GitCommand) DiffCmdStr(file *File, plain bool, cached bool) string {
 		colorArg = ""
 	}
 
-	return fmt.Sprintf("git diff %s %s %s %s", colorArg, cachedArg, trackedArg, fileName)
+	return fmt.Sprintf("git diff --stat -p %s %s %s %s", colorArg, cachedArg, trackedArg, fileName)
 }
 
 func (c *GitCommand) ApplyPatch(patch string, flags ...string) error {
@@ -1105,7 +1105,7 @@ func (c *GitCommand) FetchRemote(remoteName string) error {
 }
 
 func (c *GitCommand) GetReflogCommits() ([]*Commit, error) {
-	output, err := c.OSCommand.RunCommandWithOutput("git reflog")
+	output, err := c.OSCommand.RunCommandWithOutput("git reflog --abbrev=20")
 	if err != nil {
 		return nil, err
 	}

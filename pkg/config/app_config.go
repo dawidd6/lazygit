@@ -253,6 +253,8 @@ func GetDefaultConfig() []byte {
       - white
     optionsTextColor:
       - blue
+    selectedLineBgColor:
+      - blue
   commitLength:
     show: true
 git:
@@ -281,6 +283,9 @@ keybinding:
     nextBlock: '<right>'
     prevBlock-alt: 'h'
     nextBlock-alt: 'l'
+    nextMatch: 'n'
+    prevMatch: 'N'
+    startSearch: '/'
     optionMenu: 'x'
     optionMenu-alt1: '?'
     select: '<space>'
@@ -295,7 +300,7 @@ keybinding:
     scrollDownMain-alt1: 'J'
     scrollUpMain-alt2: '<c-u>'
     scrollDownMain-alt2: '<c-d>'
-    executeCustomCommand: 'X'
+    executeCustomCommand: ':'
     createRebaseOptionsMenu: 'm'
     pushFiles: 'P'
     pullFiles: 'p'
@@ -303,6 +308,8 @@ keybinding:
     createPatchOptionsMenu: '<c-p>'
     nextTab: ']'
     prevTab: '['
+    nextScreenMode: '+'
+    prevScreenMode: '_'
   status:
     checkForUpdate: 'u'
     recentRepos: '<enter>'

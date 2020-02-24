@@ -21,6 +21,8 @@ Default path for the config file:
         - white
       optionsTextColor:
         - blue
+      selectedLineBgColor:
+        - blue
     commitLength:
       show: true
     mouseEvents: true
@@ -65,7 +67,7 @@ Default path for the config file:
       scrollDownMain-alt1: 'J' # main panel scrool down
       scrollUpMain-alt2: '<c-u>' # main panel scrool up
       scrollDownMain-alt2: '<c-d>' # main panel scrool down
-      executeCustomCommand: 'X'
+      executeCustomCommand: ':'
       createRebaseOptionsMenu: 'm'
       pushFiles: 'P'
       pullFiles: 'p'
@@ -73,6 +75,8 @@ Default path for the config file:
       createPatchOptionsMenu: '<c-p>'
       nextTab: ']'
       prevTab: '['
+      nextScreenMode: '+'
+      prevScreenMode: '_'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -193,6 +197,8 @@ If you have issues with a light terminal theme where you can't read / see the te
         - bold
       inactiveBorderColor:
         - black
+      selectedLineBgColor:
+        - blue
 ```
 
 ## Example Coloring:

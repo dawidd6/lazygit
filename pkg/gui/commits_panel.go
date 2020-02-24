@@ -623,6 +623,7 @@ func (gui *Gui) onCommitsTabClick(tabIndex int) error {
 func (gui *Gui) switchCommitsPanelContext(context string) error {
 	commitsView := gui.getCommitsView()
 	commitsView.Context = context
+	gui.onSearchEscape()
 
 	contextTabIndexMap := map[string]int{
 		"branch-commits": 0,
@@ -660,4 +661,29 @@ func (gui *Gui) handleCreateCommitResetMenu(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	return gui.createResetMenu(commit.Sha)
+}
+
+func (gui *Gui) onCommitsPanelSearchSelect(selectedLine int) error {
+	commitsView := gui.getCommitsView()
+	switch commitsView.Context {
+	case "branch-commits":
+		gui.State.Panels.Commits.SelectedLine = selectedLine
+		return gui.handleCommitSelect(gui.g, commitsView)
+	case "reflog-commits":
+		gui.State.Panels.ReflogCommits.SelectedLine = selectedLine
+		return gui.handleReflogCommitSelect(gui.g, commitsView)
+	}
+	return nil
+}
+
+func (gui *Gui) handleOpenSearchForCommitsPanel(g *gocui.Gui, v *gocui.View) error {
+	// we usually lazyload these commits but now that we're searching we need to load them now
+	if gui.State.Panels.Commits.LimitCommits {
+		gui.State.Panels.Commits.LimitCommits = false
+		if err := gui.refreshCommits(gui.g); err != nil {
+			return err
+		}
+	}
+
+	return gui.handleOpenSearch(gui.g, v)
 }
