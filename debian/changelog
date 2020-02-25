@@ -1,3 +1,18 @@
+lazygit (0.15.3-1) xenial; urgency=medium
+
+  [ David Chen ]
+  * keybinding doc for nextMatch/prevMatch in Config.md (#659)
+
+  [ Jesse Duffield ]
+  * better commit lines in fullscreen mode
+  * refactor the way we render lists
+  * color active frames green by default
+  * show file list when diffing commits
+  * better logic for checking if we're rebasing
+  * do not close over variables in a function
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Tue, 25 Feb 2020 12:25:57 +0100
+
 lazygit (0.15.2-1) xenial; urgency=medium
 
   [ Glenn Vriesman ]
