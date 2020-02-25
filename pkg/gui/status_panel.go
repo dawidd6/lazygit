@@ -6,7 +6,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/jesseduffield/gocui"
-	"github.com/jesseduffield/lazygit/pkg/commands"
+	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
@@ -35,7 +35,7 @@ func (gui *Gui) refreshStatus(g *gocui.Gui) error {
 
 		if len(branches) > 0 {
 			branch := branches[0]
-			name := utils.ColoredString(branch.Name, commands.GetBranchColor(branch.Name))
+			name := utils.ColoredString(branch.Name, presentation.GetBranchColor(branch.Name))
 			repoName := utils.GetCurrentRepoName()
 			status += fmt.Sprintf(" %s → %s", repoName, name)
 		}
@@ -136,20 +136,20 @@ func lazygitTitle() string {
 }
 
 func (gui *Gui) updateWorkTreeState() error {
-	merging, err := gui.GitCommand.IsInMergeState()
-	if err != nil {
-		return err
-	}
-	if merging {
-		gui.State.WorkingTreeState = "merging"
-		return nil
-	}
 	rebaseMode, err := gui.GitCommand.RebaseMode()
 	if err != nil {
 		return err
 	}
 	if rebaseMode != "" {
 		gui.State.WorkingTreeState = "rebasing"
+		return nil
+	}
+	merging, err := gui.GitCommand.IsInMergeState()
+	if err != nil {
+		return err
+	}
+	if merging {
+		gui.State.WorkingTreeState = "merging"
 		return nil
 	}
 	gui.State.WorkingTreeState = "normal"

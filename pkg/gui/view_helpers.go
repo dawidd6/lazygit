@@ -387,18 +387,13 @@ func (gui *Gui) refreshSelectedLine(line *int, total int) {
 	}
 }
 
-func (gui *Gui) renderListPanel(v *gocui.View, items interface{}) error {
+func (gui *Gui) renderDisplayStrings(v *gocui.View, displayStrings [][]string) {
 	gui.g.Update(func(g *gocui.Gui) error {
-		isFocused := gui.g.CurrentView().Name() == v.Name()
-		list, err := utils.RenderList(items, isFocused)
-		if err != nil {
-			return gui.createErrorPanel(gui.g, err.Error())
-		}
+		list := utils.RenderDisplayStrings(displayStrings)
 		v.Clear()
 		fmt.Fprint(v, list)
 		return nil
 	})
-	return nil
 }
 
 func (gui *Gui) renderPanelOptions() error {
