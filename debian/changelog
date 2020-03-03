@@ -1,3 +1,52 @@
+lazygit (0.16-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * fix bug where commits appeared as green despite not being pushed
+
+  [ Corentin Rossignon ]
+  * Fix OutOfBound array access when looking for ReflogCommits refs #679
+
+  [ David Chen ]
+  * fix #680: unpushed commits still appear to be green instead of red
+  * set --abbrev-commit to return 8-digit hash strings
+
+  [ Maurice de Bruyn ]
+  * Add scoop install option to README.
+
+  [ hitsuji no shippo ]
+  * fix keybinds document
+
+  [ Jesse Duffield ]
+  * fix cheatsheet script to support different contexts
+  * better keybindings for staging by line
+  * better keybindings for patch building mode
+
+  [ William Wagner Moraes Artero ]
+  * feat: configurable services
+  * feat: flexible service configuration
+  * fix: owner groups (GitLab)
+  * docs: configuration and pull request services' settings
+  * fix: accidentally escaped %s
+  * chore: keeping coverage up :D
+  * docs: moved services conf docs to config.md
+
+  [ Patrick DeVivo ]
+  * Add TODOs badge to README
+
+  [ Jesse Duffield ]
+  * Create Custom_Pagers.md
+  * Update Custom_Pagers.md
+  * Update README.md
+  * bump gocui
+  * supporing custom pagers step 1
+  * more generic way of supporting custom pagers
+  * fix test
+  * refactor
+  * update config
+  * allow configuring side panel width
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Tue, 03 Mar 2020 18:20:03 +0100
+
 lazygit (0.15.3-1) xenial; urgency=medium
 
   [ David Chen ]
