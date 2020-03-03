@@ -1,17 +1,18 @@
-# User Config:
+# User Config
 
 Default path for the config file:
 
 * Linux: `~/.config/jesseduffield/lazygit/config.yml`
 * MacOS: `~/Library/Application Support/jesseduffield/lazygit/config.yml`
 
-## Default:
+## Default
 
 ```yaml
   gui:
     # stuff relating to the UI
     scrollHeight: 2 # how many lines you scroll by
     scrollPastBottom: true # enable scrolling past the bottom
+    sidePanelWidth: 0.3333 # number from 0 to 1
     theme:
       lightTheme: false # For terminals with a light background
       activeBorderColor:
@@ -28,6 +29,9 @@ Default path for the config file:
     mouseEvents: true
     skipUnstageLineWarning: false
   git:
+    paging:
+      colorArg: always
+      useConfig: false
     merging:
       # only applicable to unix users
       manualCommit: false
@@ -136,30 +140,30 @@ Default path for the config file:
       undo: 'z'
 ```
 
-## Platform Defaults:
+## Platform Defaults
 
-### Windows:
+### Windows
 
 ```yaml
   os:
     openCommand: 'cmd /c "start "" {{filename}}"'
 ```
 
-### Linux:
+### Linux
 
 ```yaml
   os:
     openCommand: 'sh -c "xdg-open {{filename}} >/dev/null"'
 ```
 
-### OSX:
+### OSX
 
 ```yaml
   os:
     openCommand: 'open {{filename}}'
 ```
 
-### Recommended Config Values:
+### Recommended Config Values
 
 for users of VSCode
 
@@ -168,7 +172,7 @@ for users of VSCode
     openCommand: 'code -r {{filename}}'
 ```
 
-## Color Attributes:
+## Color Attributes
 
 For color attributes you can choose an array of attributes (with max one color attribute)
 The available attributes are:
@@ -186,7 +190,7 @@ The available attributes are:
 - reverse # useful for high-contrast
 - underline
 
-## Light terminal theme:
+## Light terminal theme
 
 If you have issues with a light terminal theme where you can't read / see the text add these settings
 
@@ -203,15 +207,16 @@ If you have issues with a light terminal theme where you can't read / see the te
         - blue
 ```
 
-## Example Coloring:
+## Example Coloring
 
 ![border example](/docs/resources/colored-border-example.png)
 
-## Keybindings:
+## Keybindings
+
 For all possible keybinding options, check [Custom_Keybinding.md](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybinding.md)
 
+### Example Keybindings For Colemak Users
 
-#### Example Keybindings For Colemak Users:
 ```yaml
   keybinding:
     universal:
@@ -238,3 +243,19 @@ For all possible keybinding options, check [Custom_Keybinding.md](https://github
       viewGitFlowOptions: 'I'
 ```
 
+## Custom pull request URLs
+
+Some git provider setups (e.g. on-premises GitLab) can have distinct URLs for git-related calls and
+the web interface/API itself. To work with those, Lazygit needs to know where it needs to create
+the pull request. You can do so on your `config.yml` file using the following syntax:
+
+```yaml
+services:
+  "<gitDomain>": "<provider>:<webDomain>"
+```
+
+Where:
+
+- `gitDomain` stands for the domain used by git itself (i.e. the one present on clone URLs), e.g. `git.work.com`
+- `provider` is one of `github`, `bitbucket` or `gitlab`
+- `webDomain` is the URL where your git service exposes a web interface and APIs, e.g. `gitservice.work.com`

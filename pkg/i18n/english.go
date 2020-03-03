@@ -501,16 +501,19 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			Other: `select hunk`,
 		}, &i18n.Message{
 			ID:    "StageSelection",
-			Other: `stage selection`,
+			Other: `toggle line staged / unstaged`,
 		}, &i18n.Message{
 			ID:    "ResetSelection",
-			Other: `reset selection`,
+			Other: `delete change (git reset)`,
 		}, &i18n.Message{
 			ID:    "ToggleDragSelect",
 			Other: `toggle drag select`,
 		}, &i18n.Message{
 			ID:    "ToggleSelectHunk",
 			Other: `toggle select hunk`,
+		}, &i18n.Message{
+			ID:    "ToggleSelectionForPatch",
+			Other: `add/remove line(s) to patch`,
 		},
 		&i18n.Message{
 			ID:    "TogglePanel",
@@ -564,6 +567,54 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 		}, &i18n.Message{
 			ID:    "RebaseOptionsTitle",
 			Other: "Rebase Options",
+		}, &i18n.Message{
+			ID:    "CommitMessageTitle",
+			Other: "Commit Message",
+		}, &i18n.Message{
+			ID:    "Local-BranchesTitle",
+			Other: "Branches Tab",
+		}, &i18n.Message{
+			ID:    "SearchTitle",
+			Other: "Search",
+		}, &i18n.Message{
+			ID:    "TagsTitle",
+			Other: "Tags Tab",
+		}, &i18n.Message{
+			ID:    "Branch-CommitsTitle",
+			Other: "Commits Tab",
+		}, &i18n.Message{
+			ID:    "MenuTitle",
+			Other: "Menu",
+		}, &i18n.Message{
+			ID:    "RemotesTitle",
+			Other: "Remotes Tab",
+		}, &i18n.Message{
+			ID:    "CredentialsTitle",
+			Other: "Credentials",
+		}, &i18n.Message{
+			ID:    "Remote-BranchesTitle",
+			Other: "Remote Branches (in Remotes tab)",
+		}, &i18n.Message{
+			ID:    "Patch-BuildingTitle",
+			Other: "Patch Building",
+		}, &i18n.Message{
+			ID:    "InformationTitle",
+			Other: "Information",
+		}, &i18n.Message{
+			ID:    "SecondaryTitle",
+			Other: "Secondary",
+		}, &i18n.Message{
+			ID:    "Reflog-CommitsTitle",
+			Other: "Reflog Tab",
+		}, &i18n.Message{
+			ID:    "Title",
+			Other: "Title",
+		}, &i18n.Message{
+			ID:    "GlobalTitle",
+			Other: "Global Keybindings",
+		}, &i18n.Message{
+			ID:    "MerginTitle",
+			Other: "Mergin",
 		}, &i18n.Message{
 			ID:    "ConflictsResolved",
 			Other: "all merge conflicts resolved. Continue?",
@@ -652,6 +703,12 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "ScrollUp",
 			Other: "scroll up",
 		}, &i18n.Message{
+			ID:    "scrollUpMainPanel",
+			Other: "scroll up main panel",
+		}, &i18n.Message{
+			ID:    "scrollDownMainPanel",
+			Other: "scroll down main panel",
+		}, &i18n.Message{
 			ID:    "AmendCommitTitle",
 			Other: "Amend Commit",
 		}, &i18n.Message{
@@ -692,7 +749,7 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			Other: "view commit's files",
 		}, &i18n.Message{
 			ID:    "CommitFilesTitle",
-			Other: "Commit files",
+			Other: "Commit Files",
 		}, &i18n.Message{
 			ID:    "goBack",
 			Other: "go back",
@@ -951,6 +1008,12 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 		}, &i18n.Message{
 			ID:    "prevScreenMode",
 			Other: "prev screen mode",
+		}, &i18n.Message{
+			ID:    "Panel",
+			Other: "Panel",
+		}, &i18n.Message{
+			ID:    "Keybindings",
+			Other: "Keybindings",
 		},
 	)
 }

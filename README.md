@@ -1,8 +1,8 @@
-# lazygit [![CircleCI](https://circleci.com/gh/jesseduffield/lazygit.svg?style=svg)](https://circleci.com/gh/jesseduffield/lazygit) [![codecov](https://codecov.io/gh/jesseduffield/lazygit/branch/master/graph/badge.svg)](https://codecov.io/gh/jesseduffield/lazygit) [![Go Report Card](https://goreportcard.com/badge/github.com/jesseduffield/lazygit)](https://goreportcard.com/report/github.com/jesseduffield/lazygit) [![GolangCI](https://golangci.com/badges/github.com/jesseduffield/lazygit.svg)](https://golangci.com) [![GoDoc](https://godoc.org/github.com/jesseduffield/lazygit?status.svg)](http://godoc.org/github.com/jesseduffield/lazygit) [![GitHub tag](https://img.shields.io/github/tag/jesseduffield/lazygit.svg)]()
+# lazygit [![CircleCI](https://circleci.com/gh/jesseduffield/lazygit.svg?style=svg)](https://circleci.com/gh/jesseduffield/lazygit) [![codecov](https://codecov.io/gh/jesseduffield/lazygit/branch/master/graph/badge.svg)](https://codecov.io/gh/jesseduffield/lazygit) [![Go Report Card](https://goreportcard.com/badge/github.com/jesseduffield/lazygit)](https://goreportcard.com/report/github.com/jesseduffield/lazygit) [![GolangCI](https://golangci.com/badges/github.com/jesseduffield/lazygit.svg)](https://golangci.com) [![GoDoc](https://godoc.org/github.com/jesseduffield/lazygit?status.svg)](http://godoc.org/github.com/jesseduffield/lazygit) [![GitHub tag](https://img.shields.io/github/tag/jesseduffield/lazygit.svg)]() [![TODOs](https://badgen.net/https/api.tickgit.com/badgen/github.com/jesseduffield/lazygit)](https://www.tickgit.com/browse?repo=github.com/jesseduffield/lazygit)
 
 A simple terminal UI for git commands, written in Go with the [gocui](https://github.com/jroimartin/gocui 'gocui') library.
 
-Rant time: You've heard it before, git is _powerful_, but what good is that power when everything is so damn hard to do? Interactive rebasing requires you to edit a goddamn TODO file in your editor? *Are you kidding me?* To stage part of a file you need to use a command line program stepping through each hunk and if a hunk can't be split down any further but contains code you don't want to stage, bad luck? *Are you KIDDING me?!* Sometimes you get asked to stash your changes when switching branches only to realise that after you switch and unstash that there weren't even any conflicts and it would have been fine to just checkout the branch directly? *YOU HAVE GOT TO BE KIDDING ME!* 
+Rant time: You've heard it before, git is _powerful_, but what good is that power when everything is so damn hard to do? Interactive rebasing requires you to edit a goddamn TODO file in your editor? *Are you kidding me?* To stage part of a file you need to use a command line program stepping through each hunk and if a hunk can't be split down any further but contains code you don't want to stage, bad luck? *Are you KIDDING me?!* Sometimes you get asked to stash your changes when switching branches only to realise that after you switch and unstash that there weren't even any conflicts and it would have been fine to just checkout the branch directly? *YOU HAVE GOT TO BE KIDDING ME!*
 
 If you're a mere mortal like me and you're tired of hearing how powerful git is when in your daily life it's a powerful pain in your ass, lazygit might be for you.
 
@@ -24,9 +24,11 @@ Github Sponsors is matching all donations dollar-for-dollar for 12 months so if 
 ## Installation
 
 ### Homebrew
+
 Normally the lazygit formula can be found in the Homebrew core but we suggest you tap our formula to get the frequently updated one. It works with Linux, too.
 
 Tap:
+
 ```
 brew install jesseduffield/lazygit/lazygit
 ```
@@ -38,8 +40,10 @@ brew install lazygit
 ```
 
 ### MacPorts
+
 Latest version built from github releases.
 Tap:
+
 ```
 sudo port install lazygit
 ```
@@ -63,6 +67,17 @@ They follow upstream latest releases
 ```sh
 sudo xbps-install -S lazygit
 ```
+### Scoop (Windows)
+
+You can install `lazygit` using [scoop](https://scoop.sh/). It's in the `extras` bucket:
+
+```sh
+# Add the extras bucket
+scoop bucket add extras
+
+# Install lazygit
+scoop install lazygit
+```
 
 ### Arch Linux
 
@@ -71,11 +86,11 @@ Packages for Arch Linux are available via AUR (Arch User Repository).
 There are two packages. The stable one which is built with the latest release
 and the git version which builds from the most recent commit.
 
-- Stable: https://aur.archlinux.org/packages/lazygit/
-- Development: https://aur.archlinux.org/packages/lazygit-git/
+- Stable: <https://aur.archlinux.org/packages/lazygit/>
+- Development: <https://aur.archlinux.org/packages/lazygit-git/>
 
 Instruction of how to install AUR content can be found here:
-https://wiki.archlinux.org/index.php/Arch_User_Repository
+<https://wiki.archlinux.org/index.php/Arch_User_Repository>
 
 ### Fedora and CentOS 7
 
@@ -88,7 +103,7 @@ sudo dnf install lazygit
 
 ### Conda
 
-Released versions are available for different platforms, see https://anaconda.org/conda-forge/lazygit
+Released versions are available for different platforms, see <https://anaconda.org/conda-forge/lazygit>
 
 ```sh
 conda install -c conda-forge lazygit
@@ -120,10 +135,11 @@ whichever rc file you're using).
 - Rebase Magic tutorial [here](https://youtu.be/4XaToVut_hs)
 - List of keybindings
   [here](/docs/keybindings).
-  
+
 ## Changing Directory On Exit
 
 If you change repos in lazygit and want your shell to change directory into that repo on exiting lazygit, add this to your `~/.zshrc` (or other rc file):
+
 ```
 lg()
 {
@@ -137,7 +153,16 @@ lg()
     fi
 }
 ```
+
 Then `source ~/.zshrc` and from now on when you call `lg` and exit you'll switch directories to whatever you were in inside lazyigt. To override this behaviour you can exit using `shift+Q` rather than just `q`.
+
+## Configuration
+
+Check the [configuration docs](docs/Config.md).
+
+## Custom Pagers
+
+See the [docs](docs/Custom_Pagers.md)
 
 ## Cool features
 

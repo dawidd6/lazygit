@@ -225,6 +225,7 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Modifier:    gocui.ModNone,
 			Handler:     gui.scrollUpMain,
 			Alternative: "fn+up",
+			Description: gui.Tr.SLocalize("scrollUpMainPanel"),
 		},
 		{
 			ViewName:    "",
@@ -232,6 +233,7 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Modifier:    gocui.ModNone,
 			Handler:     gui.scrollDownMain,
 			Alternative: "fn+down",
+			Description: gui.Tr.SLocalize("scrollDownMainPanel"),
 		},
 		{
 			ViewName: "",
@@ -1013,7 +1015,7 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Contexts:    []string{"staging"},
 			Key:         gui.getKey("universal.select"),
 			Modifier:    gocui.ModNone,
-			Handler:     gui.handleStageSelection,
+			Handler:     gui.handleToggleStagedSelection,
 			Description: gui.Tr.SLocalize("StageSelection"),
 		},
 		{
@@ -1135,16 +1137,8 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Contexts:    []string{"patch-building"},
 			Key:         gui.getKey("universal.select"),
 			Modifier:    gocui.ModNone,
-			Handler:     gui.handleAddSelectionToPatch,
-			Description: gui.Tr.SLocalize("StageSelection"),
-		},
-		{
-			ViewName:    "main",
-			Contexts:    []string{"patch-building"},
-			Key:         gui.getKey("universal.remove"),
-			Modifier:    gocui.ModNone,
-			Handler:     gui.handleRemoveSelectionFromPatch,
-			Description: gui.Tr.SLocalize("ResetSelection"),
+			Handler:     gui.handleToggleSelectionForPatch,
+			Description: gui.Tr.SLocalize("ToggleSelectionForPatch"),
 		},
 		{
 			ViewName:    "main",

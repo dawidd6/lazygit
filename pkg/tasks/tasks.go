@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/sirupsen/logrus"
 )
 
@@ -45,26 +46,19 @@ func (m *ViewBufferManager) ReadLines(n int) {
 	}()
 }
 
-func (m *ViewBufferManager) NewCmdTask(cmd *exec.Cmd, linesToRead int) func(chan struct{}) error {
+func (m *ViewBufferManager) NewCmdTask(r io.Reader, cmd *exec.Cmd, linesToRead int, onDone func()) func(chan struct{}) error {
 	return func(stop chan struct{}) error {
-		r, err := cmd.StdoutPipe()
-		if err != nil {
-			return err
-		}
-		cmd.Stderr = cmd.Stdout
-
-		if err := cmd.Start(); err != nil {
-			return err
-		}
-
 		go func() {
 			<-stop
-			if cmd.ProcessState == nil {
-				if err := kill(cmd); err != nil {
-					m.Log.Warn(err)
-				}
+			if err := commands.Kill(cmd); err != nil {
+				m.Log.Warn(err)
+			}
+			if onDone != nil {
+				onDone()
 			}
 		}()
+
+		loadingMutex := sync.Mutex{}
 
 		// not sure if it's the right move to redefine this or not
 		m.readLines = make(chan int, 1024)
@@ -82,11 +76,13 @@ func (m *ViewBufferManager) NewCmdTask(cmd *exec.Cmd, linesToRead int) func(chan
 				defer ticker.Stop()
 				select {
 				case <-ticker.C:
+					loadingMutex.Lock()
 					if !loaded {
 						m.beforeStart()
 						m.writer.Write([]byte("loading..."))
 						m.refreshView()
 					}
+					loadingMutex.Unlock()
 				case <-stop:
 					return
 				}
@@ -98,13 +94,16 @@ func (m *ViewBufferManager) NewCmdTask(cmd *exec.Cmd, linesToRead int) func(chan
 				case linesToRead := <-m.readLines:
 					for i := 0; i < linesToRead; i++ {
 						ok := scanner.Scan()
+						loadingMutex.Lock()
 						if !loaded {
 							m.beforeStart()
 							loaded = true
 						}
+						loadingMutex.Unlock()
 
 						select {
 						case <-stop:
+							m.refreshView()
 							break outer
 						default:
 						}
@@ -116,12 +115,19 @@ func (m *ViewBufferManager) NewCmdTask(cmd *exec.Cmd, linesToRead int) func(chan
 					}
 					m.refreshView()
 				case <-stop:
+					m.refreshView()
 					break outer
 				}
 			}
 
 			if err := cmd.Wait(); err != nil {
 				m.Log.Warn(err)
+			}
+
+			m.refreshView()
+
+			if onDone != nil {
+				onDone()
 			}
 
 			close(done)
@@ -141,7 +147,7 @@ func (t *ViewBufferManager) Close() {
 		return
 	}
 
-	c := make(chan struct{}, 1)
+	c := make(chan struct{})
 
 	go func() {
 		t.currentTask.Stop()
@@ -170,7 +176,10 @@ func (m *ViewBufferManager) NewTask(f func(stop chan struct{}) error) error {
 
 		m.waitingMutex.Lock()
 		defer m.waitingMutex.Unlock()
+
+		m.Log.Infof("done waiting")
 		if taskID < m.newTaskId {
+			m.Log.Infof("returning cos the task is obsolete")
 			return
 		}
 
@@ -215,14 +224,4 @@ func (t *Task) Stop() {
 	t.Log.Info("received notifystopped message")
 	t.stopped = true
 	return
-}
-
-// kill kills a process
-func kill(cmd *exec.Cmd) error {
-	if cmd.Process == nil {
-		// somebody got to it before we were able to, poor bastard
-		return nil
-	}
-
-	return cmd.Process.Kill()
 }

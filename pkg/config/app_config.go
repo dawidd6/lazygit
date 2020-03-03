@@ -244,6 +244,7 @@ func GetDefaultConfig() []byte {
   scrollPastBottom: true
   mouseEvents: true
   skipUnstageLineWarning: false
+  sidePanelWidth: 0.3333
   theme:
     lightTheme: false
     activeBorderColor:
@@ -258,6 +259,9 @@ func GetDefaultConfig() []byte {
   commitLength:
     show: true
 git:
+  paging:
+    colorArg: always
+    useConfig: false
   merging:
     manualCommit: false
   skipHookPrefix: 'WIP'

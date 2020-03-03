@@ -18,7 +18,17 @@ func (gui *Gui) newCmdTask(viewName string, cmd *exec.Cmd) error {
 
 	manager := gui.getManager(view)
 
-	if err := manager.NewTask(manager.NewCmdTask(cmd, height+oy+10)); err != nil {
+	r, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	cmd.Stderr = cmd.Stdout
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	if err := manager.NewTask(manager.NewCmdTask(r, cmd, height+oy+10, nil)); err != nil {
 		return err
 	}
 
@@ -69,7 +79,10 @@ func (gui *Gui) getManager(view *gocui.View) *tasks.ViewBufferManager {
 				view.Clear()
 			},
 			func() {
-				gui.g.Update(func(*gocui.Gui) error { return nil })
+				gui.g.Update(func(*gocui.Gui) error {
+					gui.Log.Warn("updating view")
+					return nil
+				})
 			})
 		gui.viewBufferManagerMap[view.Name()] = manager
 	}
