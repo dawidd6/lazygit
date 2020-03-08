@@ -1,3 +1,13 @@
+lazygit (0.16.2-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * new version
+
+  [ Dawid Dziurla ]
+  * d/update.sh: delete
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Sun, 08 Mar 2020 12:00:09 +0100
+
 lazygit (0.16-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
