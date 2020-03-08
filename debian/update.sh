@@ -1,8 +1,0 @@
-#!/bin/bash
-
-set -euo pipefail
-
-gbp import-ref -u $1
-gbp dch -D xenial -N $1-1
-git add debian/changelog
-git commit -S -m "d/changelog: dch $1"
