@@ -1,3 +1,131 @@
+lazygit (0.18-1) xenial; urgency=medium
+
+  [ Rui Chen ]
+  * Bump golang to v1.14
+  * go mod vendor
+  * Add gox to vendor list
+
+  [ skwerlman ]
+  * make branches and files non-ambiguous for git-log
+  * update tests to match changed command
+
+  [ Jesse Duffield ]
+  * use selected branch as base when creating a new branch
+
+  [ Dawid Dziurla ]
+  * add homebrew bump formula workflow
+
+  [ Jesse Duffield ]
+  * case insensitive search
+  * big golangci-lint cleanup
+  * be a bit more lenient
+
+  [ hitsuji_no_shippo ]
+  * fix keybindings of main panel in docs
+  * add search keybings in docs
+
+  [ Jesse Duffield ]
+  * better upstream tracking and allow renaming a branch
+
+  [ hitsuji_no_shippo ]
+  * fix search keybindings in docs
+  * add close menu keybindings in docs
+  * add opne menu keybindings in docs
+
+  [ Jesse Duffield ]
+  * fix docs
+  * fix branch parser
+  * fix branch building
+  * allow resetting cherry picked commits selection
+  * show status of selected cherry picked commits
+
+  [ Dawid Dziurla ]
+  * Remove circleci config
+  * Remove homebrew workflow
+  * Add CD workflow
+  * Add CI workflow
+  * Modify CI badge in README
+  * Fix typo in script name
+  * Add golangci-lint Action
+  * Run 4 builds in parallel
+  * Continue if lint step fails
+  * Don't run codecov or golangci Actions
+  * Use setup-go Action instead of container
+  * Cache builds
+  * Wording
+  * Add GOBIN to PATH
+  * Remove redundant semicolon
+  * goreleaser: ignore arm64 build for freebsd
+  * workflows: use get-tag action
+  * README: remove codecov badge
+  * workflows: git fetch --unshallow before goreleaser step
+
+  [ Jesse Duffield ]
+  * more compatible commands
+  * add tab keybindings
+
+  [ J. B. Rainsberger ]
+  * Fixed an incorrect criticism of git in the README.
+  * inject more humor into the README
+  * improved spelling
+  * Made the humor more concise and clear.
+
+  [ Jesse Duffield ]
+  * undo via rebase
+  * autostash changes when hard resetting
+  * use reflog undo history pointer
+  * better formatted reflog list
+  * note that undo functionality is experimental
+  * undoing status
+  * add waiting status to checkout ref handler
+  * redoing
+  * support reflog action prefix
+  * more explicit env vars
+  * stateless undos and redos
+  * refactor undo and redo
+  * move into undoing file
+  * fix tests
+  * vastly improve the logic for undo and redo
+  * ignore redundant actions when undoing and redoing
+  * just disallow undo/redo while rebasing because you need more info than just the reflog
+  * document undo
+  * update cheatsheet
+  * Update README.md
+  * Update Undoing.md
+
+  [ Dawid Dziurla ]
+  * pkg: use upstream pty package
+  * go mod tidy
+  * go mod vendor
+  * goreleaser: stop ignoring arm64 build for freebsd
+  * workflows: install gox in separate step in /tmp directory
+  * workflows: run goreleaser as a build step for CI
+
+  [ Jesse Duffield ]
+  * Update README.md
+  * more lenient getting of short shas
+
+  [ Francisco Miamoto ]
+  * add table of contents to readme
+  * change binary releases order
+
+  [ Jesse Duffield ]
+  * add rebasing gif
+  * add staging gif
+  * Update README.md
+  * better staging gif
+  * Update README.md
+  * another staging gif
+  * delete unused assets
+  * better handling of current branch name
+  * separate commits from cherry pick state
+  * relax limit on commit list and reset on branch change
+  * only load new reflog entries
+  * limit size of menu panel
+  * allow applying patch directly
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Fri, 10 Apr 2020 21:48:12 +0200
+
 lazygit (0.16.2-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
