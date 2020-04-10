@@ -34,9 +34,7 @@ func (gui *Gui) handleReflogCommitSelect(g *gocui.Gui, v *gocui.View) error {
 	if commit == nil {
 		return gui.newStringTask("main", "No reflog history")
 	}
-	if err := gui.focusPoint(0, gui.State.Panels.ReflogCommits.SelectedLine, len(gui.State.ReflogCommits), v); err != nil {
-		return err
-	}
+	v.FocusPoint(0, gui.State.Panels.ReflogCommits.SelectedLine)
 
 	cmd := gui.OSCommand.ExecutableFromString(
 		gui.GitCommand.ShowCmdStr(commit.Sha),
@@ -49,12 +47,17 @@ func (gui *Gui) handleReflogCommitSelect(g *gocui.Gui, v *gocui.View) error {
 }
 
 func (gui *Gui) refreshReflogCommits() error {
-	commits, err := gui.GitCommand.GetReflogCommits()
+	var lastReflogCommit *commands.Commit
+	if len(gui.State.ReflogCommits) > 0 {
+		lastReflogCommit = gui.State.ReflogCommits[0]
+	}
+
+	commits, err := gui.GitCommand.GetNewReflogCommits(lastReflogCommit)
 	if err != nil {
 		return gui.createErrorPanel(gui.g, err.Error())
 	}
 
-	gui.State.ReflogCommits = commits
+	gui.State.ReflogCommits = append(commits, gui.State.ReflogCommits...)
 
 	if gui.getCommitsView().Context == "reflog-commits" {
 		return gui.renderReflogCommitsWithSelection()
@@ -67,7 +70,7 @@ func (gui *Gui) renderReflogCommitsWithSelection() error {
 	commitsView := gui.getCommitsView()
 
 	gui.refreshSelectedLine(&gui.State.Panels.ReflogCommits.SelectedLine, len(gui.State.ReflogCommits))
-	displayStrings := presentation.GetCommitListDisplayStrings(gui.State.ReflogCommits, gui.State.ScreenMode != SCREEN_NORMAL)
+	displayStrings := presentation.GetReflogCommitListDisplayStrings(gui.State.ReflogCommits, gui.State.ScreenMode != SCREEN_NORMAL)
 	gui.renderDisplayStrings(commitsView, displayStrings)
 	if gui.g.CurrentView() == commitsView && commitsView.Context == "reflog-commits" {
 		if err := gui.handleReflogCommitSelect(gui.g, commitsView); err != nil {
@@ -85,7 +88,7 @@ func (gui *Gui) handleCheckoutReflogCommit(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	err := gui.createConfirmationPanel(g, gui.getCommitsView(), true, gui.Tr.SLocalize("checkoutCommit"), gui.Tr.SLocalize("SureCheckoutThisCommit"), func(g *gocui.Gui, v *gocui.View) error {
-		return gui.handleCheckoutRef(commit.Sha)
+		return gui.handleCheckoutRef(commit.Sha, handleCheckoutRefOptions{})
 	}, nil)
 	if err != nil {
 		return err

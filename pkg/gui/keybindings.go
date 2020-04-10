@@ -162,15 +162,15 @@ func (gui *Gui) getKeyDisplay(name string) string {
 func GetKeyDisplay(key interface{}) string {
 	keyInt := 0
 
-	switch key.(type) {
+	switch key := key.(type) {
 	case rune:
-		keyInt = int(key.(rune))
+		keyInt = int(key)
 	case gocui.Key:
-		value, ok := keyMapReversed[key.(gocui.Key)]
+		value, ok := keyMapReversed[key]
 		if ok {
 			return value
 		}
-		keyInt = int(key.(gocui.Key))
+		keyInt = int(key)
 	}
 
 	return string(keyInt)
@@ -295,10 +295,11 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Description: gui.Tr.SLocalize("refresh"),
 		},
 		{
-			ViewName: "",
-			Key:      gui.getKey("universal.optionMenu"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleCreateOptionsMenu,
+			ViewName:    "",
+			Key:         gui.getKey("universal.optionMenu"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleCreateOptionsMenu,
+			Description: gui.Tr.SLocalize("openMenu"),
 		},
 		{
 			ViewName: "",
@@ -311,6 +312,20 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Key:      gocui.MouseMiddle,
 			Modifier: gocui.ModNone,
 			Handler:  gui.handleCreateOptionsMenu,
+		},
+		{
+			ViewName:    "",
+			Key:         gui.getKey("universal.undo"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.reflogUndo,
+			Description: gui.Tr.SLocalize("undoReflog"),
+		},
+		{
+			ViewName:    "",
+			Key:         gui.getKey("universal.redo"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.reflogRedo,
+			Description: gui.Tr.SLocalize("redoReflog"),
 		},
 		{
 			ViewName:    "status",
@@ -570,6 +585,14 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 		},
 		{
 			ViewName:    "branches",
+			Contexts:    []string{"local-branches"},
+			Key:         gui.getKey("branches.renameBranch"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleRenameBranch,
+			Description: gui.Tr.SLocalize("renameBranch"),
+		},
+		{
+			ViewName:    "branches",
 			Contexts:    []string{"tags"},
 			Key:         gui.getKey("universal.select"),
 			Modifier:    gocui.ModNone,
@@ -609,16 +632,18 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Description: gui.Tr.SLocalize("viewResetOptions"),
 		},
 		{
-			ViewName: "branches",
-			Key:      gui.getKey("universal.nextTab"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleNextBranchesTab,
+			ViewName:    "branches",
+			Key:         gui.getKey("universal.nextTab"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleNextBranchesTab,
+			Description: gui.Tr.SLocalize("nextTab"),
 		},
 		{
-			ViewName: "branches",
-			Key:      gui.getKey("universal.prevTab"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handlePrevBranchesTab,
+			ViewName:    "branches",
+			Key:         gui.getKey("universal.prevTab"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handlePrevBranchesTab,
+			Description: gui.Tr.SLocalize("prevTab"),
 		},
 		{
 			ViewName:    "branches",
@@ -645,22 +670,25 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Description: gui.Tr.SLocalize("fetchRemote"),
 		},
 		{
-			ViewName: "commits",
-			Key:      gui.getKey("universal.nextTab"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleNextCommitsTab,
+			ViewName:    "commits",
+			Key:         gui.getKey("universal.nextTab"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleNextCommitsTab,
+			Description: gui.Tr.SLocalize("nextTab"),
 		},
 		{
-			ViewName: "commits",
-			Key:      gui.getKey("universal.prevTab"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handlePrevCommitsTab,
+			ViewName:    "commits",
+			Key:         gui.getKey("universal.prevTab"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handlePrevCommitsTab,
+			Description: gui.Tr.SLocalize("prevTab"),
 		},
 		{
-			ViewName: "commits",
-			Key:      gui.getKey("universal.startSearch"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleOpenSearchForCommitsPanel,
+			ViewName:    "commits",
+			Key:         gui.getKey("universal.startSearch"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleOpenSearchForCommitsPanel,
+			Description: gui.Tr.SLocalize("startSearch"),
 		},
 		{
 			ViewName:    "commits",
@@ -832,6 +860,14 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 		},
 		{
 			ViewName:    "commits",
+			Contexts:    []string{"branch-commits"},
+			Key:         gui.getKey("commits.resetCherryPick"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleResetCherryPick,
+			Description: gui.Tr.SLocalize("resetCherryPick"),
+		},
+		{
+			ViewName:    "commits",
 			Contexts:    []string{"reflog-commits"},
 			Key:         gui.getKey("universal.select"),
 			Modifier:    gocui.ModNone,
@@ -892,16 +928,18 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Handler:  gui.handleCloseCredentialsView,
 		},
 		{
-			ViewName: "menu",
-			Key:      gui.getKey("universal.return"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleMenuClose,
+			ViewName:    "menu",
+			Key:         gui.getKey("universal.return"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleMenuClose,
+			Description: gui.Tr.SLocalize("closeMenu"),
 		},
 		{
-			ViewName: "menu",
-			Key:      gui.getKey("universal.quit"),
-			Modifier: gocui.ModNone,
-			Handler:  gui.handleMenuClose,
+			ViewName:    "menu",
+			Key:         gui.getKey("universal.quit"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleMenuClose,
+			Description: gui.Tr.SLocalize("closeMenu"),
 		},
 		{
 			ViewName: "information",
@@ -1318,10 +1356,10 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 		{
 			ViewName:    "main",
 			Contexts:    []string{"merging"},
-			Key:         gui.getKey("main.undo"),
+			Key:         gui.getKey("universal.undo"),
 			Modifier:    gocui.ModNone,
 			Handler:     gui.handlePopFileSnapshot,
-			Description: gui.Tr.SLocalize("Undo"),
+			Description: gui.Tr.SLocalize("undo"),
 		},
 		{
 			ViewName: "branches",
@@ -1424,6 +1462,30 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Modifier: gocui.ModNone,
 			Handler:  gui.handleSearchEscape,
 		},
+		{
+			ViewName: "confirmation",
+			Key:      gui.getKey("universal.prevItem"),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollUpConfirmationPanel,
+		},
+		{
+			ViewName: "confirmation",
+			Key:      gui.getKey("universal.nextItem"),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollDownConfirmationPanel,
+		},
+		{
+			ViewName: "confirmation",
+			Key:      gui.getKey("universal.prevItem-alt"),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollUpConfirmationPanel,
+		},
+		{
+			ViewName: "confirmation",
+			Key:      gui.getKey("universal.nextItem-alt"),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollDownConfirmationPanel,
+		},
 	}
 
 	for _, viewName := range []string{"status", "branches", "files", "commits", "commitFiles", "stash", "menu"} {
@@ -1454,7 +1516,14 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 
 		// we need a specific keybinding for the commits panel beacuse it usually lazyloads commits
 		if listView.viewName != "commits" {
-			bindings = append(bindings, &Binding{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.startSearch"), Modifier: gocui.ModNone, Handler: gui.handleOpenSearch})
+			bindings = append(bindings, &Binding{
+				ViewName:    listView.viewName,
+				Contexts:    []string{listView.context},
+				Key:         gui.getKey("universal.startSearch"),
+				Modifier:    gocui.ModNone,
+				Handler:     gui.handleOpenSearch,
+				Description: gui.Tr.SLocalize("startSearch"),
+			})
 		}
 	}
 

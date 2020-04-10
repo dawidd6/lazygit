@@ -314,6 +314,8 @@ keybinding:
     prevTab: '['
     nextScreenMode: '+'
     prevScreenMode: '_'
+    undo: 'z'
+    redo: '<c-z>'
   status:
     checkForUpdate: 'u'
     recentRepos: '<enter>'
@@ -334,6 +336,7 @@ keybinding:
     checkoutBranchByName: 'c'
     forceCheckoutBranch: 'F'
     rebaseBranch: 'r'
+    renameBranch: 'R'
     mergeIntoCurrentBranch: 'M'
     viewGitFlowOptions: 'i'
     fastForward: 'f'
@@ -359,6 +362,7 @@ keybinding:
     tagCommit: 'T'
     toggleDiffCommit: 'i'
     checkoutCommit: '<space>'
+    resetCherryPick: '<c-R>'
   stash:
     popStash: 'g'
   commitFiles:
@@ -368,7 +372,6 @@ keybinding:
     toggleDragSelect-alt: 'V'
     toggleSelectHunk: 'a'
     pickBothHunks: 'b'
-    undo: 'z'
 `)
 }
 

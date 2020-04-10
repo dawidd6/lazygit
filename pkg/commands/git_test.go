@@ -628,7 +628,7 @@ func TestGitCommandResetToCommit(t *testing.T) {
 		return exec.Command("echo")
 	}
 
-	assert.NoError(t, gitCmd.ResetToCommit("78976bc", "hard"))
+	assert.NoError(t, gitCmd.ResetToCommit("78976bc", "hard", RunCommandOptions{}))
 }
 
 // TestGitCommandNewBranch is a function.
@@ -636,12 +636,12 @@ func TestGitCommandNewBranch(t *testing.T) {
 	gitCmd := NewDummyGitCommand()
 	gitCmd.OSCommand.command = func(cmd string, args ...string) *exec.Cmd {
 		assert.EqualValues(t, "git", cmd)
-		assert.EqualValues(t, []string{"checkout", "-b", "test"}, args)
+		assert.EqualValues(t, []string{"checkout", "-b", "test", "master"}, args)
 
 		return exec.Command("echo")
 	}
 
-	assert.NoError(t, gitCmd.NewBranch("test"))
+	assert.NoError(t, gitCmd.NewBranch("test", "master"))
 }
 
 // TestGitCommandDeleteBranch is a function.
@@ -1439,7 +1439,7 @@ func TestGitCommandCheckout(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
-			s.test(gitCmd.Checkout("test", s.force))
+			s.test(gitCmd.Checkout("test", CheckoutOptions{Force: s.force}))
 		})
 	}
 }
@@ -1449,7 +1449,7 @@ func TestGitCommandGetBranchGraph(t *testing.T) {
 	gitCmd := NewDummyGitCommand()
 	gitCmd.OSCommand.command = func(cmd string, args ...string) *exec.Cmd {
 		assert.EqualValues(t, "git", cmd)
-		assert.EqualValues(t, []string{"log", "--graph", "--color=always", "--abbrev-commit", "--decorate", "--date=relative", "--pretty=medium", "test"}, args)
+		assert.EqualValues(t, []string{"log", "--graph", "--color=always", "--abbrev-commit", "--decorate", "--date=relative", "--pretty=medium", "test", "--"}, args)
 
 		return exec.Command("echo")
 	}
@@ -1549,7 +1549,7 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 	type scenario struct {
 		testName string
 		command  func(string, ...string) *exec.Cmd
-		test     func(string, error)
+		test     func(string, string, error)
 	}
 
 	scenarios := []scenario{
@@ -1559,9 +1559,10 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 				assert.Equal(t, "git", cmd)
 				return exec.Command("echo", "master")
 			},
-			func(output string, err error) {
+			func(name string, displayname string, err error) {
 				assert.NoError(t, err)
-				assert.EqualValues(t, "master", output)
+				assert.EqualValues(t, "master", name)
+				assert.EqualValues(t, "master", displayname)
 			},
 		},
 		{
@@ -1580,9 +1581,32 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 
 				return nil
 			},
-			func(output string, err error) {
+			func(name string, displayname string, err error) {
 				assert.NoError(t, err)
-				assert.EqualValues(t, "master", output)
+				assert.EqualValues(t, "master", name)
+				assert.EqualValues(t, "master", displayname)
+			},
+		},
+		{
+			"handles a detached head",
+			func(cmd string, args ...string) *exec.Cmd {
+				assert.EqualValues(t, "git", cmd)
+
+				switch args[0] {
+				case "symbolic-ref":
+					assert.EqualValues(t, []string{"symbolic-ref", "--short", "HEAD"}, args)
+					return exec.Command("test")
+				case "branch":
+					assert.EqualValues(t, []string{"branch", "--contains"}, args)
+					return exec.Command("echo", "* (HEAD detached at 123abcd)")
+				}
+
+				return nil
+			},
+			func(name string, displayname string, err error) {
+				assert.NoError(t, err)
+				assert.EqualValues(t, "123abcd", name)
+				assert.EqualValues(t, "(HEAD detached at 123abcd)", displayname)
 			},
 		},
 		{
@@ -1591,9 +1615,10 @@ func TestGitCommandCurrentBranchName(t *testing.T) {
 				assert.Equal(t, "git", cmd)
 				return exec.Command("test")
 			},
-			func(output string, err error) {
+			func(name string, displayname string, err error) {
 				assert.Error(t, err)
-				assert.EqualValues(t, "", output)
+				assert.EqualValues(t, "", name)
+				assert.EqualValues(t, "", displayname)
 			},
 		},
 	}
@@ -1907,7 +1932,7 @@ func TestGitCommandGetCommitFiles(t *testing.T) {
 			"123456",
 			test.CreateMockCommand(t, []*test.CommandSwapper{
 				{
-					Expect:  "git show --pretty= --name-only --no-renames 123456",
+					Expect:  "git diff-tree --no-commit-id --name-only -r --no-renames 123456",
 					Replace: "echo 'hello\nworld'",
 				},
 			}),
@@ -2130,7 +2155,7 @@ func TestGitCommandSkipEditorCommand(t *testing.T) {
 		)
 	})
 
-	cmd.RunSkipEditorCommand("true")
+	_ = cmd.RunSkipEditorCommand("true")
 }
 
 func TestFindDotGitDir(t *testing.T) {

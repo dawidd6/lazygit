@@ -322,28 +322,38 @@ func (c *GitCommand) Fetch(unamePassQuestion func(string) string, canAskForCrede
 }
 
 // ResetToCommit reset to commit
-func (c *GitCommand) ResetToCommit(sha string, strength string) error {
-	return c.OSCommand.RunCommand("git reset --%s %s", strength, sha)
+func (c *GitCommand) ResetToCommit(sha string, strength string, options RunCommandOptions) error {
+	return c.OSCommand.RunCommandWithOptions(fmt.Sprintf("git reset --%s %s", strength, sha), options)
 }
 
 // NewBranch create new branch
-func (c *GitCommand) NewBranch(name string) error {
-	return c.OSCommand.RunCommand("git checkout -b %s", name)
+func (c *GitCommand) NewBranch(name string, baseBranch string) error {
+	return c.OSCommand.RunCommand("git checkout -b %s %s", name, baseBranch)
 }
 
-// CurrentBranchName is a function.
-func (c *GitCommand) CurrentBranchName() (string, error) {
+// CurrentBranchName get the current branch name and displayname.
+// the first returned string is the name and the second is the displayname
+// e.g. name is 123asdf and displayname is '(HEAD detached at 123asdf)'
+func (c *GitCommand) CurrentBranchName() (string, string, error) {
 	branchName, err := c.OSCommand.RunCommandWithOutput("git symbolic-ref --short HEAD")
-	if err != nil || branchName == "HEAD\n" {
-		output, err := c.OSCommand.RunCommandWithOutput("git branch --contains")
-		if err != nil {
-			return "", err
-		}
-		re := regexp.MustCompile(CurrentBranchNameRegex)
-		match := re.FindStringSubmatch(output)
-		branchName = match[1]
+	if err == nil && branchName != "HEAD\n" {
+		trimmedBranchName := strings.TrimSpace(branchName)
+		return trimmedBranchName, trimmedBranchName, nil
 	}
-	return utils.TrimTrailingNewline(branchName), nil
+	output, err := c.OSCommand.RunCommandWithOutput("git branch --contains")
+	if err != nil {
+		return "", "", err
+	}
+	for _, line := range utils.SplitLines(output) {
+		re := regexp.MustCompile(CurrentBranchNameRegex)
+		match := re.FindStringSubmatch(line)
+		if len(match) > 0 {
+			branchName = match[1]
+			displayBranchName := match[0][2:]
+			return branchName, displayBranchName, nil
+		}
+	}
+	return "HEAD", "HEAD", nil
 }
 
 // DeleteBranch delete branch
@@ -522,12 +532,17 @@ func (c *GitCommand) DiscardUnstagedFileChanges(file *File) error {
 }
 
 // Checkout checks out a branch (or commit), with --force if you set the force arg to true
-func (c *GitCommand) Checkout(branch string, force bool) error {
+type CheckoutOptions struct {
+	Force   bool
+	EnvVars []string
+}
+
+func (c *GitCommand) Checkout(branch string, options CheckoutOptions) error {
 	forceArg := ""
-	if force {
+	if options.Force {
 		forceArg = "--force "
 	}
-	return c.OSCommand.RunCommand("git checkout %s %s", forceArg, branch)
+	return c.OSCommand.RunCommandWithOptions(fmt.Sprintf("git checkout %s %s", forceArg, branch), RunCommandOptions{EnvVars: options.EnvVars})
 }
 
 // PrepareCommitSubProcess prepares a subprocess for `git commit`
@@ -563,7 +578,7 @@ func (c *GitCommand) ShowCmdStr(sha string) string {
 }
 
 func (c *GitCommand) GetBranchGraphCmdStr(branchName string) string {
-	return fmt.Sprintf("git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium %s", branchName)
+	return fmt.Sprintf("git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium %s --", branchName)
 }
 
 // GetRemoteURL returns current repo remote url
@@ -866,7 +881,7 @@ func (c *GitCommand) CherryPickCommits(commits []*Commit) error {
 
 // GetCommitFiles get the specified commit files
 func (c *GitCommand) GetCommitFiles(commitSha string, patchManager *PatchManager) ([]*CommitFile, error) {
-	files, err := c.OSCommand.RunCommandWithOutput("git show --pretty= --name-only --no-renames %s", commitSha)
+	files, err := c.OSCommand.RunCommandWithOutput("git diff-tree --no-commit-id --name-only -r --no-renames %s", commitSha)
 	if err != nil {
 		return nil, err
 	}
@@ -1105,26 +1120,42 @@ func (c *GitCommand) FetchRemote(remoteName string) error {
 	return c.OSCommand.RunCommand("git fetch %s", remoteName)
 }
 
-func (c *GitCommand) GetReflogCommits() ([]*Commit, error) {
-	output, err := c.OSCommand.RunCommandWithOutput("git reflog --abbrev=20")
+// GetNewReflogCommits only returns the new reflog commits since the given lastReflogCommit
+// if none is passed (i.e. it's value is nil) then we get all the reflog commits
+func (c *GitCommand) GetNewReflogCommits(lastReflogCommit *Commit) ([]*Commit, error) {
+	output, err := c.OSCommand.RunCommandWithOutput("git reflog --abbrev=20 --date=iso")
 	if err != nil {
-		return nil, err
+		// assume error means we have no reflog
+		return []*Commit{}, nil
 	}
 
 	lines := strings.Split(strings.TrimSpace(output), "\n")
-	commits := make([]*Commit, len(lines))
-	re := regexp.MustCompile(`(\w+).*HEAD@\{\d+\}: (.*)`)
-	for i, line := range lines {
+	commits := make([]*Commit, 0, len(lines))
+	re := regexp.MustCompile(`(\w+).*HEAD@\{([^\}]+)\}: (.*)`)
+	cmd := c.OSCommand.ExecutableFromString("git reflog --abbrev=20 --date=iso")
+	err = RunLineOutputCmd(cmd, func(line string) (bool, error) {
 		match := re.FindStringSubmatch(line)
 		if len(match) <= 1 {
-			continue
+			return false, nil
 		}
 
-		commits[i] = &Commit{
+		commit := &Commit{
 			Sha:    match[1],
-			Name:   match[2],
+			Name:   match[3],
+			Date:   match[2],
 			Status: "reflog",
 		}
+
+		if lastReflogCommit != nil && commit.Sha == lastReflogCommit.Sha && commit.Date == lastReflogCommit.Date {
+			// after this point we already have these reflogs loaded so we'll simply return the new ones
+			return true, nil
+		}
+
+		commits = append(commits, commit)
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return commits, nil
@@ -1162,4 +1193,8 @@ func (c *GitCommand) GetPager(width int) string {
 
 func (c *GitCommand) colorArg() string {
 	return c.Config.GetUserConfig().GetString("git.paging.colorArg")
+}
+
+func (c *GitCommand) RenameBranch(oldName string, newName string) error {
+	return c.OSCommand.RunCommand("git branch --move %s %s", oldName, newName)
 }

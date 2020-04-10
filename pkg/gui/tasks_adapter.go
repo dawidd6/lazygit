@@ -59,7 +59,8 @@ func (gui *Gui) newStringTask(viewName string, str string) error {
 	manager := gui.getManager(view)
 
 	f := func(stop chan struct{}) error {
-		return gui.renderString(gui.g, viewName, str)
+		gui.renderString(gui.g, viewName, str)
+		return nil
 	}
 
 	if err := manager.NewTask(f); err != nil {
@@ -80,7 +81,6 @@ func (gui *Gui) getManager(view *gocui.View) *tasks.ViewBufferManager {
 			},
 			func() {
 				gui.g.Update(func(*gocui.Gui) error {
-					gui.Log.Warn("updating view")
 					return nil
 				})
 			})

@@ -361,6 +361,12 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "undo",
 			Other: "undo",
 		}, &i18n.Message{
+			ID:    "undoReflog",
+			Other: "undo (via reflog) (experimental)",
+		}, &i18n.Message{
+			ID:    "redoReflog",
+			Other: "redo (via reflog) (experimental)",
+		}, &i18n.Message{
 			ID:    "pop",
 			Other: "pop",
 		}, &i18n.Message{
@@ -742,6 +748,15 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "CherryPickingStatus",
 			Other: "cherry-picking",
 		}, &i18n.Message{
+			ID:    "UndoingStatus",
+			Other: "undoing",
+		}, &i18n.Message{
+			ID:    "RedoingStatus",
+			Other: "redoing",
+		}, &i18n.Message{
+			ID:    "CheckingOutStatus",
+			Other: "checking out",
+		}, &i18n.Message{
 			ID:    "CommitFiles",
 			Other: "Commit files",
 		}, &i18n.Message{
@@ -1009,11 +1024,44 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "prevScreenMode",
 			Other: "prev screen mode",
 		}, &i18n.Message{
+			ID:    "startSearch",
+			Other: "start search",
+		}, &i18n.Message{
 			ID:    "Panel",
 			Other: "Panel",
 		}, &i18n.Message{
 			ID:    "Keybindings",
 			Other: "Keybindings",
+		}, &i18n.Message{
+			ID:    "renameBranch",
+			Other: "rename branch",
+		}, &i18n.Message{
+			ID:    "NewBranchNamePrompt",
+			Other: "Enter new branch name for branch",
+		}, &i18n.Message{
+			ID:    "RenameBranchWarning",
+			Other: "This branch is tracking a remote. This action will only rename the local branch name, not the name of the remote branch. Continue?",
+		}, &i18n.Message{
+			ID:    "openMenu",
+			Other: "open menu",
+		}, &i18n.Message{
+			ID:    "closeMenu",
+			Other: "close menu",
+		}, &i18n.Message{
+			ID:    "resetCherryPick",
+			Other: "reset cherry-picked (copied) commits selection",
+		}, &i18n.Message{
+			ID:    "nextTab",
+			Other: "next tab",
+		}, &i18n.Message{
+			ID:    "prevTab",
+			Other: "previous tab",
+		}, &i18n.Message{
+			ID:    "cantUndoWhileRebasing",
+			Other: "Can't undo while rebasing",
+		}, &i18n.Message{
+			ID:    "cantRedoWhileRebasing",
+			Other: "Can't redo while rebasing",
 		},
 	)
 }

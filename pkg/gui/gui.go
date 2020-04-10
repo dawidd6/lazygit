@@ -24,7 +24,6 @@ import (
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/config"
-	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
 	"github.com/jesseduffield/lazygit/pkg/tasks"
 	"github.com/jesseduffield/lazygit/pkg/theme"
@@ -81,7 +80,7 @@ type Gui struct {
 	GitCommand           *commands.GitCommand
 	OSCommand            *commands.OSCommand
 	SubProcess           *exec.Cmd
-	State                guiState
+	State                *guiState
 	Config               config.AppConfigurer
 	Tr                   *i18n.Localizer
 	Errors               SentinelErrors
@@ -214,6 +213,7 @@ type guiState struct {
 	Ptmx                 *os.File
 	PrevMainWidth        int
 	PrevMainHeight       int
+	OldInformation       string
 }
 
 // for now the split view will always be on
@@ -221,7 +221,7 @@ type guiState struct {
 // NewGui builds a new gui handler
 func NewGui(log *logrus.Entry, gitCommand *commands.GitCommand, oSCommand *commands.OSCommand, tr *i18n.Localizer, config config.AppConfigurer, updater *updates.Updater) (*Gui, error) {
 
-	initialState := guiState{
+	initialState := &guiState{
 		Files:               make([]*commands.File, 0),
 		PreviousView:        "files",
 		Commits:             make([]*commands.Commit, 0),
@@ -278,6 +278,10 @@ func (gui *Gui) nextScreenMode(g *gocui.Gui, v *gocui.View) error {
 	if err := gui.refreshCommitsViewWithSelection(); err != nil {
 		return err
 	}
+	// same with branches
+	if err := gui.refreshBranchesViewWithSelection(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -286,6 +290,10 @@ func (gui *Gui) prevScreenMode(g *gocui.Gui, v *gocui.View) error {
 	gui.State.ScreenMode = utils.PrevIntInCycle([]int{SCREEN_NORMAL, SCREEN_HALF, SCREEN_FULL}, gui.State.ScreenMode)
 	// commits render differently depending on whether we're in fullscreen more or not
 	if err := gui.refreshCommitsViewWithSelection(); err != nil {
+		return err
+	}
+	// same with branches
+	if err := gui.refreshBranchesViewWithSelection(); err != nil {
 		return err
 	}
 
@@ -335,6 +343,20 @@ func (gui *Gui) scrollDownSecondary(g *gocui.Gui, v *gocui.View) error {
 	return gui.scrollDownView("secondary")
 }
 
+func (gui *Gui) scrollUpConfirmationPanel(g *gocui.Gui, v *gocui.View) error {
+	if v.Editable {
+		return nil
+	}
+	return gui.scrollUpView("confirmation")
+}
+
+func (gui *Gui) scrollDownConfirmationPanel(g *gocui.Gui, v *gocui.View) error {
+	if v.Editable {
+		return nil
+	}
+	return gui.scrollDownView("confirmation")
+}
+
 func (gui *Gui) handleRefresh(g *gocui.Gui, v *gocui.View) error {
 	return gui.refreshSidePanels(g)
 }
@@ -381,15 +403,11 @@ func (gui *Gui) onFocusLost(v *gocui.View, newView *gocui.View) error {
 		return nil
 	}
 	if v.IsSearching() && newView.Name() != "search" {
-		gui.onSearchEscape()
+		if err := gui.onSearchEscape(); err != nil {
+			return err
+		}
 	}
 	switch v.Name() {
-	case "branches":
-		if v.Context == "local-branches" {
-			// This stops the branches panel from showing the upstream/downstream changes to the selected branch, when it loses focus
-			displayStrings := presentation.GetBranchListDisplayStrings(gui.State.Branches, false, -1)
-			gui.renderDisplayStrings(gui.getBranchesView(), displayStrings)
-		}
 	case "main":
 		// if we have lost focus to a first-class panel, we need to do some cleanup
 		gui.changeMainViewsContext("normal")
@@ -491,6 +509,9 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		donate := color.New(color.FgMagenta, color.Underline).Sprint(gui.Tr.SLocalize("Donate"))
 		information = donate + " " + information
 	}
+	if len(gui.State.CherryPickedCommits) > 0 {
+		information = utils.ColoredString(fmt.Sprintf("%d commits copied", len(gui.State.CherryPickedCommits)), color.FgCyan)
+	}
 
 	minimumHeight := 9
 	minimumWidth := 10
@@ -518,7 +539,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	}
 
 	_, _ = g.SetViewOnBottom("limit")
-	g.DeleteView("limit")
+	_ = g.DeleteView("limit")
 
 	sidePanelWidthRatio := gui.Config.GetUserConfig().GetFloat64("gui.sidePanelWidth")
 
@@ -538,7 +559,6 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		}
 	}
 
-	panelSplitX := width - 1
 	mainPanelLeft := leftSideWidth + 1
 	mainPanelRight := width - 1
 	secondaryPanelLeft := width - 1
@@ -547,7 +567,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	if gui.State.SplitMainPanel {
 		if gui.State.ScreenMode == SCREEN_FULL {
 			mainPanelLeft = 0
-			panelSplitX = width/2 - 4
+			panelSplitX := width/2 - 4
 			mainPanelRight = panelSplitX
 			secondaryPanelLeft = panelSplitX + 1
 		} else if width < 220 {
@@ -558,7 +578,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			units := 5
 			leftSideWidth = width / units
 			mainPanelLeft = leftSideWidth + 1
-			panelSplitX = (1 + ((units - 1) / 2)) * width / units
+			panelSplitX := (1 + ((units - 1) / 2)) * width / units
 			mainPanelRight = panelSplitX
 			secondaryPanelLeft = panelSplitX + 1
 		}
@@ -693,7 +713,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			if err.Error() != "unknown view" {
 				return err
 			}
-			g.SetViewOnBottom("commitMessage")
+			_, _ = g.SetViewOnBottom("commitMessage")
 			commitMessageView.Title = gui.Tr.SLocalize("CommitMessage")
 			commitMessageView.FgColor = textColor
 			commitMessageView.Editable = true
@@ -758,21 +778,24 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		}
 	}
 
-	if v, err := g.SetView("information", optionsVersionBoundary-1, height-2, width, height, 0); err != nil {
+	informationView, err := g.SetView("information", optionsVersionBoundary-1, height-2, width, height, 0)
+	if err != nil {
 		if err.Error() != "unknown view" {
 			return err
 		}
-		v.BgColor = gocui.ColorDefault
-		v.FgColor = gocui.ColorGreen
-		v.Frame = false
-		if err := gui.renderString(g, "information", information); err != nil {
-			return err
-		}
+		informationView.BgColor = gocui.ColorDefault
+		informationView.FgColor = gocui.ColorGreen
+		informationView.Frame = false
+		gui.renderString(g, "information", information)
 
 		// doing this here because it'll only happen once
 		if err := gui.onInitialViewsCreation(); err != nil {
 			return err
 		}
+	}
+	if gui.State.OldInformation != information {
+		gui.setViewContent(g, informationView, information)
+		gui.State.OldInformation = information
 	}
 
 	if gui.g.CurrentView() == nil {
@@ -812,9 +835,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			continue
 		}
 		// check if the selected line is now out of view and if so refocus it
-		if err := gui.focusPoint(0, listView.selectedLine, listView.lineCount, listView.view); err != nil {
-			return err
-		}
+		listView.view.FocusPoint(0, listView.selectedLine)
 	}
 
 	mainViewWidth, mainViewHeight := gui.getMainView().Size()
@@ -909,7 +930,8 @@ func (gui *Gui) fetch(g *gocui.Gui, v *gocui.View, canAskForCredentials bool) (u
 		_ = gui.createConfirmationPanel(g, v, true, gui.Tr.SLocalize("Error"), coloredMessage, close, close)
 	}
 
-	gui.refreshStatus(g)
+	_ = gui.refreshStatus(g)
+
 	return unamePassOpend, err
 }
 
@@ -918,7 +940,7 @@ func (gui *Gui) renderGlobalOptions() error {
 		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.scrollUpMain"), gui.getKeyDisplay("universal.scrollDownMain")):                                                                                 gui.Tr.SLocalize("scroll"),
 		fmt.Sprintf("%s %s %s %s", gui.getKeyDisplay("universal.prevBlock"), gui.getKeyDisplay("universal.nextBlock"), gui.getKeyDisplay("universal.prevItem"), gui.getKeyDisplay("universal.nextItem")): gui.Tr.SLocalize("navigate"),
 		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.return"), gui.getKeyDisplay("universal.quit")):                                                                                                 gui.Tr.SLocalize("close"),
-		fmt.Sprintf("%s", gui.getKeyDisplay("universal.optionMenu")):                                                                                                                                     gui.Tr.SLocalize("menu"),
+		gui.getKeyDisplay("universal.optionMenu"): gui.Tr.SLocalize("menu"),
 		"1-5": gui.Tr.SLocalize("jump"),
 	})
 }

@@ -10,9 +10,19 @@
   <kbd>P</kbd>: push
   <kbd>p</kbd>: pull
   <kbd>R</kbd>: refresh
+  <kbd>x</kbd>: open menu
+  <kbd>z</kbd>: undo (via reflog) (experimental)
+  <kbd>ctrl+z</kbd>: redo (via reflog) (experimental)
   <kbd>+</kbd>: next screen mode (normal/half/fullscreen)
   <kbd>_</kbd>: prev screen mode
   <kbd>:</kbd>: execute custom command
+</pre>
+
+## Branches Panel
+
+<pre>
+  <kbd>]</kbd>: next tab
+  <kbd>[</kbd>: previous tab
 </pre>
 
 ## Branches Panel (Branches Tab)
@@ -29,6 +39,8 @@
   <kbd>i</kbd>: show git-flow options
   <kbd>f</kbd>: fast-forward this branch from its upstream
   <kbd>g</kbd>: view reset options
+  <kbd>R</kbd>: rename branch
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Branches Panel (Remote Branches (in Remotes tab))
@@ -41,6 +53,7 @@
   <kbd>d</kbd>: delete branch
   <kbd>r</kbd>: rebase checked-out branch onto this branch
   <kbd>u</kbd>: set as upstream of checked-out branch
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Branches Panel (Remotes Tab)
@@ -50,6 +63,7 @@
   <kbd>n</kbd>: add new remote
   <kbd>d</kbd>: remove remote
   <kbd>e</kbd>: edit remote
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Branches Panel (Tags Tab)
@@ -60,6 +74,7 @@
   <kbd>P</kbd>: push tag
   <kbd>n</kbd>: create tag
   <kbd>g</kbd>: view reset options
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Commit Files Panel
@@ -71,6 +86,15 @@
   <kbd>o</kbd>: open file
   <kbd>space</kbd>: toggle file included in patch
   <kbd>enter</kbd>: enter file to add selected lines to the patch
+  <kbd>/</kbd>: start search
+</pre>
+
+## Commits Panel
+
+<pre>
+  <kbd>]</kbd>: next tab
+  <kbd>[</kbd>: previous tab
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Commits Panel (Commits Tab)
@@ -97,6 +121,7 @@
   <kbd>space</kbd>: checkout commit
   <kbd>i</kbd>: select commit to diff with another commit
   <kbd>T</kbd>: tag commit
+  <kbd>ctrl+r</kbd>: reset cherry-picked (copied) commits selection
 </pre>
 
 ## Commits Panel (Reflog Tab)
@@ -126,6 +151,7 @@
   <kbd>enter</kbd>: stage individual hunks/lines
   <kbd>f</kbd>: fetch
   <kbd>g</kbd>: view upstream reset options
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Main Panel (Merging)
@@ -156,8 +182,7 @@
   <kbd>▼</kbd>: select next line
   <kbd>◄</kbd>: select previous hunk
   <kbd>►</kbd>: select next hunk
-  <kbd>space</kbd>: stage selection
-  <kbd>d</kbd>: reset selection
+  <kbd>space</kbd>: add/remove line(s) to patch
   <kbd>v</kbd>: toggle drag select
   <kbd>V</kbd>: toggle drag select
   <kbd>a</kbd>: toggle select hunk
@@ -167,8 +192,8 @@
 
 <pre>
   <kbd>esc</kbd>: return to files panel
-  <kbd>space</kbd>: stage selection
-  <kbd>d</kbd>: reset selection
+  <kbd>space</kbd>: toggle line staged / unstaged
+  <kbd>d</kbd>: delete change (git reset)
   <kbd>tab</kbd>: switch to other panel
   <kbd>▲</kbd>: select previous line
   <kbd>▼</kbd>: select next line
@@ -184,12 +209,21 @@
   <kbd>C</kbd>: commit changes using git editor
 </pre>
 
+## Menu Panel
+
+<pre>
+  <kbd>esc</kbd>: close menu
+  <kbd>q</kbd>: close menu
+  <kbd>/</kbd>: start search
+</pre>
+
 ## Stash Panel
 
 <pre>
   <kbd>space</kbd>: apply
   <kbd>g</kbd>: pop
   <kbd>d</kbd>: drop
+  <kbd>/</kbd>: start search
 </pre>
 
 ## Status Panel

@@ -83,6 +83,8 @@ Default path for the config file:
       prevTab: '['
       nextScreenMode: '+'
       prevScreenMode: '_'
+      undo: 'z'
+      redo: '<c-z>'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -128,6 +130,7 @@ Default path for the config file:
       tagCommit: 'T'
       toggleDiffCommit: 'i'
       checkoutCommit: '<space>'
+      resetCherryPick: '<c-R>'
     stash:
       popStash: 'g'
     commitFiles:
@@ -137,7 +140,6 @@ Default path for the config file:
       toggleDragSelect-alt: 'V'
       toggleSelectHunk: 'a'
       pickBothHunks: 'b'
-      undo: 'z'
 ```
 
 ## Platform Defaults

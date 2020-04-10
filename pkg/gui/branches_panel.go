@@ -40,12 +40,7 @@ func (gui *Gui) handleBranchSelect(g *gocui.Gui, v *gocui.View) error {
 		return gui.newStringTask("main", gui.Tr.SLocalize("NoBranchesThisRepo"))
 	}
 	branch := gui.getSelectedBranch()
-	if err := gui.focusPoint(0, gui.State.Panels.Branches.SelectedLine, len(gui.State.Branches), v); err != nil {
-		return err
-	}
-	if err := gui.RenderSelectedBranchUpstreamDifferences(); err != nil {
-		return err
-	}
+	v.FocusPoint(0, gui.State.Panels.Branches.SelectedLine)
 
 	cmd := gui.OSCommand.ExecutableFromString(
 		gui.GitCommand.GetBranchGraphCmdStr(branch.Name),
@@ -54,24 +49,6 @@ func (gui *Gui) handleBranchSelect(g *gocui.Gui, v *gocui.View) error {
 		gui.Log.Error(err)
 	}
 	return nil
-}
-
-func (gui *Gui) RenderSelectedBranchUpstreamDifferences() error {
-	return gui.newTask("branches", func(stop chan struct{}) error {
-		branch := gui.getSelectedBranch()
-		branch.Pushables, branch.Pullables = gui.GitCommand.GetBranchUpstreamDifferenceCount(branch.Name)
-
-		select {
-		case <-stop:
-			return nil
-		default:
-		}
-
-		branchesView := gui.getBranchesView()
-		displayStrings := presentation.GetBranchListDisplayStrings(gui.State.Branches, gui.currentViewName() == "branches", gui.State.Panels.Branches.SelectedLine)
-		gui.renderDisplayStrings(branchesView, displayStrings)
-		return nil
-	})
 }
 
 // gui.refreshStatus is called at the end of this because that's when we can
@@ -108,9 +85,8 @@ func (gui *Gui) renderLocalBranchesWithSelection() error {
 	branchesView := gui.getBranchesView()
 
 	gui.refreshSelectedLine(&gui.State.Panels.Branches.SelectedLine, len(gui.State.Branches))
-	if err := gui.RenderSelectedBranchUpstreamDifferences(); err != nil {
-		return err
-	}
+	displayStrings := presentation.GetBranchListDisplayStrings(gui.State.Branches, gui.State.ScreenMode != SCREEN_NORMAL)
+	gui.renderDisplayStrings(branchesView, displayStrings)
 	if gui.g.CurrentView() == branchesView {
 		if err := gui.handleBranchSelect(gui.g, branchesView); err != nil {
 			return err
@@ -130,7 +106,7 @@ func (gui *Gui) handleBranchPress(g *gocui.Gui, v *gocui.View) error {
 		return gui.createErrorPanel(g, gui.Tr.SLocalize("AlreadyCheckedOutBranch"))
 	}
 	branch := gui.getSelectedBranch()
-	return gui.handleCheckoutRef(branch.Name)
+	return gui.handleCheckoutRef(branch.Name, handleCheckoutRefOptions{})
 }
 
 func (gui *Gui) handleCreatePullRequestPress(g *gocui.Gui, v *gocui.View) error {
@@ -160,55 +136,75 @@ func (gui *Gui) handleForceCheckout(g *gocui.Gui, v *gocui.View) error {
 	message := gui.Tr.SLocalize("SureForceCheckout")
 	title := gui.Tr.SLocalize("ForceCheckoutBranch")
 	return gui.createConfirmationPanel(g, v, true, title, message, func(g *gocui.Gui, v *gocui.View) error {
-		if err := gui.GitCommand.Checkout(branch.Name, true); err != nil {
-			gui.createErrorPanel(g, err.Error())
+		if err := gui.GitCommand.Checkout(branch.Name, commands.CheckoutOptions{Force: true}); err != nil {
+			_ = gui.createErrorPanel(g, err.Error())
 		}
 		return gui.refreshSidePanels(g)
 	}, nil)
 }
 
-func (gui *Gui) handleCheckoutRef(ref string) error {
-	if err := gui.GitCommand.Checkout(ref, false); err != nil {
-		// note, this will only work for english-language git commands. If we force git to use english, and the error isn't this one, then the user will receive an english command they may not understand. I'm not sure what the best solution to this is. Running the command once in english and a second time in the native language is one option
+type handleCheckoutRefOptions struct {
+	WaitingStatus string
+	EnvVars       []string
+}
 
-		if strings.Contains(err.Error(), "Please commit your changes or stash them before you switch branch") {
-			// offer to autostash changes
-			return gui.createConfirmationPanel(gui.g, gui.getBranchesView(), true, gui.Tr.SLocalize("AutoStashTitle"), gui.Tr.SLocalize("AutoStashPrompt"), func(g *gocui.Gui, v *gocui.View) error {
-				if err := gui.GitCommand.StashSave(gui.Tr.SLocalize("StashPrefix") + ref); err != nil {
-					return gui.createErrorPanel(g, err.Error())
-				}
-				if err := gui.GitCommand.Checkout(ref, false); err != nil {
-					return gui.createErrorPanel(g, err.Error())
-				}
-
-				// checkout successful so we select the new branch
-				gui.State.Panels.Branches.SelectedLine = 0
-
-				if err := gui.GitCommand.StashDo(0, "pop"); err != nil {
-					if err := gui.refreshSidePanels(g); err != nil {
-						return err
-					}
-					return gui.createErrorPanel(g, err.Error())
-				}
-				return gui.refreshSidePanels(g)
-			}, nil)
-		}
-
-		if err := gui.createErrorPanel(gui.g, err.Error()); err != nil {
-			return err
-		}
+func (gui *Gui) handleCheckoutRef(ref string, options handleCheckoutRefOptions) error {
+	waitingStatus := options.WaitingStatus
+	if waitingStatus == "" {
+		waitingStatus = gui.Tr.SLocalize("CheckingOutStatus")
 	}
 
-	gui.State.Panels.Branches.SelectedLine = 0
-	gui.State.Panels.Commits.SelectedLine = 0
-	return gui.refreshSidePanels(gui.g)
+	cmdOptions := commands.CheckoutOptions{Force: false, EnvVars: options.EnvVars}
+
+	onSuccess := func() {
+		gui.State.Panels.Branches.SelectedLine = 0
+		gui.State.Panels.Commits.SelectedLine = 0
+		// loading a heap of commits is slow so we limit them whenever doing a reset
+		gui.State.Panels.Commits.LimitCommits = true
+	}
+
+	return gui.WithWaitingStatus(waitingStatus, func() error {
+		if err := gui.GitCommand.Checkout(ref, cmdOptions); err != nil {
+			// note, this will only work for english-language git commands. If we force git to use english, and the error isn't this one, then the user will receive an english command they may not understand. I'm not sure what the best solution to this is. Running the command once in english and a second time in the native language is one option
+
+			if strings.Contains(err.Error(), "Please commit your changes or stash them before you switch branch") {
+				// offer to autostash changes
+				return gui.createConfirmationPanel(gui.g, gui.getBranchesView(), true, gui.Tr.SLocalize("AutoStashTitle"), gui.Tr.SLocalize("AutoStashPrompt"), func(g *gocui.Gui, v *gocui.View) error {
+
+					if err := gui.GitCommand.StashSave(gui.Tr.SLocalize("StashPrefix") + ref); err != nil {
+						return gui.createErrorPanel(g, err.Error())
+					}
+					if err := gui.GitCommand.Checkout(ref, cmdOptions); err != nil {
+						return gui.createErrorPanel(g, err.Error())
+					}
+
+					onSuccess()
+
+					if err := gui.GitCommand.StashDo(0, "pop"); err != nil {
+						if err := gui.refreshSidePanels(g); err != nil {
+							return err
+						}
+						return gui.createErrorPanel(g, err.Error())
+					}
+					return gui.refreshSidePanels(g)
+				}, nil)
+			}
+
+			if err := gui.createErrorPanel(gui.g, err.Error()); err != nil {
+				return err
+			}
+		}
+
+		onSuccess()
+
+		return gui.refreshSidePanels(gui.g)
+	})
 }
 
 func (gui *Gui) handleCheckoutByName(g *gocui.Gui, v *gocui.View) error {
-	gui.createPromptPanel(g, v, gui.Tr.SLocalize("BranchName")+":", "", func(g *gocui.Gui, v *gocui.View) error {
-		return gui.handleCheckoutRef(gui.trimmedContent(v))
+	return gui.createPromptPanel(g, v, gui.Tr.SLocalize("BranchName")+":", "", func(g *gocui.Gui, v *gocui.View) error {
+		return gui.handleCheckoutRef(gui.trimmedContent(v), handleCheckoutRefOptions{})
 	})
-	return nil
 }
 
 func (gui *Gui) getCheckedOutBranch() *commands.Branch {
@@ -220,29 +216,29 @@ func (gui *Gui) getCheckedOutBranch() *commands.Branch {
 }
 
 func (gui *Gui) handleNewBranch(g *gocui.Gui, v *gocui.View) error {
-	branch := gui.getCheckedOutBranch()
+	branch := gui.getSelectedBranch()
+	if branch == nil {
+		return nil
+	}
 	message := gui.Tr.TemplateLocalize(
 		"NewBranchNameBranchOff",
 		Teml{
 			"branchName": branch.Name,
 		},
 	)
-	gui.createPromptPanel(g, v, message, "", func(g *gocui.Gui, v *gocui.View) error {
-		if err := gui.GitCommand.NewBranch(gui.trimmedContent(v)); err != nil {
+	return gui.createPromptPanel(g, v, message, "", func(g *gocui.Gui, v *gocui.View) error {
+		if err := gui.GitCommand.NewBranch(gui.trimmedContent(v), branch.Name); err != nil {
 			return gui.createErrorPanel(g, err.Error())
 		}
-		gui.refreshSidePanels(g)
+		if err := gui.refreshSidePanels(g); err != nil {
+			return gui.createErrorPanel(g, err.Error())
+		}
 		return gui.handleBranchSelect(g, v)
 	})
-	return nil
 }
 
 func (gui *Gui) handleDeleteBranch(g *gocui.Gui, v *gocui.View) error {
 	return gui.deleteBranch(g, v, false)
-}
-
-func (gui *Gui) handleForceDeleteBranch(g *gocui.Gui, v *gocui.View) error {
-	return gui.deleteBranch(g, v, true)
 }
 
 func (gui *Gui) deleteBranch(g *gocui.Gui, v *gocui.View, force bool) error {
@@ -378,7 +374,7 @@ func (gui *Gui) handleFastForward(g *gocui.Gui, v *gocui.View) error {
 			if err := gui.GitCommand.FastForward(branch.Name, remoteName, remoteBranchName); err != nil {
 				_ = gui.createErrorPanel(gui.g, err.Error())
 			}
-			_ = gui.RenderSelectedBranchUpstreamDifferences()
+			_ = gui.refreshBranches(gui.g)
 		}
 
 		_ = gui.closeConfirmationPrompt(gui.g, true)
@@ -397,7 +393,9 @@ func (gui *Gui) onBranchesTabClick(tabIndex int) error {
 func (gui *Gui) switchBranchesPanelContext(context string) error {
 	branchesView := gui.getBranchesView()
 	branchesView.Context = context
-	gui.onSearchEscape()
+	if err := gui.onSearchEscape(); err != nil {
+		return err
+	}
 
 	contextTabIndexMap := map[string]int{
 		"local-branches":  0,
@@ -408,7 +406,13 @@ func (gui *Gui) switchBranchesPanelContext(context string) error {
 
 	branchesView.TabIndex = contextTabIndexMap[context]
 
-	switch context {
+	return gui.refreshBranchesViewWithSelection()
+}
+
+func (gui *Gui) refreshBranchesViewWithSelection() error {
+	branchesView := gui.getBranchesView()
+
+	switch branchesView.Context {
 	case "local-branches":
 		return gui.renderLocalBranchesWithSelection()
 	case "remotes":
@@ -457,4 +461,45 @@ func (gui *Gui) onBranchesPanelSearchSelect(selectedLine int) error {
 		return gui.handleRemoteBranchSelect(gui.g, branchesView)
 	}
 	return nil
+}
+
+func (gui *Gui) handleRenameBranch(g *gocui.Gui, v *gocui.View) error {
+	branch := gui.getSelectedBranch()
+	if branch == nil {
+		return nil
+	}
+
+	promptForNewName := func() error {
+		return gui.createPromptPanel(g, v, gui.Tr.SLocalize("NewBranchNamePrompt")+" "+branch.Name+":", "", func(g *gocui.Gui, v *gocui.View) error {
+			newName := gui.trimmedContent(v)
+			if err := gui.GitCommand.RenameBranch(branch.Name, newName); err != nil {
+				return gui.createErrorPanel(gui.g, err.Error())
+			}
+			// need to checkout so that the branch shows up in our reflog and therefore
+			// doesn't get lost among all the other branches when we switch to something else
+			if err := gui.GitCommand.Checkout(newName, commands.CheckoutOptions{Force: false}); err != nil {
+				return gui.createErrorPanel(gui.g, err.Error())
+			}
+
+			return gui.refreshBranches(gui.g)
+		})
+	}
+
+	// I could do an explicit check here for whether the branch is tracking a remote branch
+	// but if we've selected it we'll already know that via Pullables and Pullables.
+	// Bit of a hack but I'm lazy.
+	notTrackingRemote := branch.Pullables == "?"
+	if notTrackingRemote {
+		return promptForNewName()
+	}
+	return gui.createConfirmationPanel(gui.g, v, true, gui.Tr.SLocalize("renameBranch"), gui.Tr.SLocalize("RenameBranchWarning"), func(_g *gocui.Gui, _v *gocui.View) error {
+		return promptForNewName()
+	}, nil)
+}
+
+func (gui *Gui) currentBranch() *commands.Branch {
+	if len(gui.State.Branches) == 0 {
+		return nil
+	}
+	return gui.State.Branches[0]
 }
