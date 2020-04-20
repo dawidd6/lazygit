@@ -1,3 +1,31 @@
+lazygit (0.20-1) xenial; urgency=medium
+
+  [ Dawid Dziurla ]
+  * workflows: update homebrew bumping action
+
+  [ Adwin Ying ]
+  * fix config docs typo
+
+  [ Jesse Duffield ]
+  * support copying stuff to clipboard
+  * whoops
+
+  [ Glenn Vriesman ]
+  * fix: fixed gpg breaking terminal
+
+  [ Jesse Duffield ]
+  * add bugfix git flow option
+  * support configurable merge args
+
+  [ Kristijan Husak ]
+  * Add option to set predefined commit message prefix. Fixes #760.
+  * Handle regex compilation errors and show them to the user.
+
+  [ Jesse Duffield ]
+  * warnings for stash actions
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Mon, 20 Apr 2020 11:09:57 +0200
+
 lazygit (0.19-1) xenial; urgency=medium
 
   [ Semro ]
