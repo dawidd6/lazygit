@@ -104,7 +104,7 @@ func (gui *Gui) isIndexToDelete(i int, conflict commands.Conflict, pick string) 
 }
 
 func (gui *Gui) resolveConflict(g *gocui.Gui, conflict commands.Conflict, pick string) error {
-	gitFile, err := gui.getSelectedFile(g)
+	gitFile, err := gui.getSelectedFile()
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (gui *Gui) resolveConflict(g *gocui.Gui, conflict commands.Conflict, pick s
 }
 
 func (gui *Gui) pushFileSnapshot(g *gocui.Gui) error {
-	gitFile, err := gui.getSelectedFile(g)
+	gitFile, err := gui.getSelectedFile()
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (gui *Gui) handlePopFileSnapshot(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	}
 	prevContent := gui.State.Panels.Merging.EditHistory.Pop().(string)
-	gitFile, err := gui.getSelectedFile(g)
+	gitFile, err := gui.getSelectedFile()
 	if err != nil {
 		return err
 	}
@@ -223,8 +223,10 @@ func (gui *Gui) refreshMergePanel() error {
 
 	mainView := gui.getMainView()
 	mainView.Wrap = false
-	gui.setViewContent(gui.g, mainView, content)
-	gui.Log.Warn("scrolling to conflict")
+	if err := gui.newStringTask("main", content); err != nil {
+		return err
+	}
+
 	if err := gui.scrollToConflict(gui.g); err != nil {
 		return err
 	}
@@ -261,7 +263,7 @@ func (gui *Gui) renderMergeOptions() error {
 
 func (gui *Gui) handleEscapeMerge(g *gocui.Gui, v *gocui.View) error {
 	gui.State.Panels.Merging.EditHistory = stack.New()
-	if err := gui.refreshFiles(); err != nil {
+	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES}}); err != nil {
 		return err
 	}
 	// it's possible this method won't be called from the merging view so we need to
@@ -276,12 +278,12 @@ func (gui *Gui) handleCompleteMerge() error {
 	if err := gui.stageSelectedFile(gui.g); err != nil {
 		return err
 	}
-	if err := gui.refreshFiles(); err != nil {
+	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES}}); err != nil {
 		return err
 	}
 	// if we got conflicts after unstashing, we don't want to call any git
 	// commands to continue rebasing/merging here
-	if gui.State.WorkingTreeState == "normal" {
+	if gui.GitCommand.WorkingTreeState() == "normal" {
 		return gui.handleEscapeMerge(gui.g, gui.getMainView())
 	}
 	// if there are no more files with merge conflicts, we should ask whether the user wants to continue

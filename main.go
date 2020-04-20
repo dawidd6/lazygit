@@ -25,6 +25,9 @@ func main() {
 	repoPath := "."
 	flaggy.String(&repoPath, "p", "path", "Path of git repo")
 
+	filterPath := ""
+	flaggy.String(&filterPath, "f", "filter", "Path to filter on in `git log -- <path>`. When in filter mode, the commits, reflog, and stash are filtered based on the given path, and some operations are restricted")
+
 	dump := ""
 	flaggy.AddPositionalValue(&dump, "gitargs", 1, false, "Todo file")
 	flaggy.DefaultParser.PositionalFlags[0].Hidden = true
@@ -61,7 +64,7 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	app, err := app.NewApp(appConfig)
+	app, err := app.NewApp(appConfig, filterPath)
 
 	if err == nil {
 		err = app.Run()

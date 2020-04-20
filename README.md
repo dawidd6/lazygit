@@ -18,7 +18,7 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
   - [MacPorts](#macports)
   - [Ubuntu](#ubuntu)
   - [Void Linux](#void-linux)
-  - [Scoop (Windows)](<#scoop-(windows)>)
+  - [Scoop (Windows)](#scoop-windows)
   - [Arch Linux](#arch-linux)
   - [Fedora and CentOS 7](#fedora-and-centos-7)
   - [Conda](#conda)
@@ -26,7 +26,7 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
 - [Usage](#usage)
   - [Keybindings](#keybindings)
   - [Changing directory on exit](#changing-directory-on-exit)
-  - [Undo/Redo](#undo/redo)
+  - [Undo/Redo](#undoredo)
 - [Configuration](#configuration)
   - [Custom pagers](#configuration)
 - [Tutorials](#tutorials)
@@ -43,7 +43,7 @@ Github Sponsors is matching all donations dollar-for-dollar for 12 months so if 
 
 ### Binary Releases
 
-For Windows, Mac OS or Linux, you can download a binary release [here](/releases).
+For Windows, Mac OS or Linux, you can download a binary release [here](../../releases).
 
 ### Homebrew
 

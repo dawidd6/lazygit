@@ -15,7 +15,7 @@ import (
 func (gui *Gui) runSyncOrAsyncCommand(sub *exec.Cmd, err error) (bool, error) {
 	if err != nil {
 		if err != gui.Errors.ErrSubProcess {
-			return false, gui.createErrorPanel(gui.g, err.Error())
+			return false, gui.surfaceError(err)
 		}
 	}
 	if sub != nil {
@@ -28,7 +28,7 @@ func (gui *Gui) runSyncOrAsyncCommand(sub *exec.Cmd, err error) (bool, error) {
 func (gui *Gui) handleCommitConfirm(g *gocui.Gui, v *gocui.View) error {
 	message := gui.trimmedContent(v)
 	if message == "" {
-		return gui.createErrorPanel(g, gui.Tr.SLocalize("CommitWithoutMessageErr"))
+		return gui.createErrorPanel(gui.Tr.SLocalize("CommitWithoutMessageErr"))
 	}
 	flags := ""
 	skipHookPrefix := gui.Config.GetUserConfig().GetString("git.skipHookPrefix")
@@ -48,7 +48,7 @@ func (gui *Gui) handleCommitConfirm(g *gocui.Gui, v *gocui.View) error {
 	_ = v.SetOrigin(0, 0)
 	_, _ = g.SetViewOnBottom("commitMessage")
 	_ = gui.switchFocus(g, v, gui.getFilesView())
-	return gui.refreshSidePanels(g)
+	return gui.refreshSidePanels(refreshOptions{mode: ASYNC})
 }
 
 func (gui *Gui) handleCommitClose(g *gocui.Gui, v *gocui.View) error {

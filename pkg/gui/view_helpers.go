@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/go-errors/errors"
 	"github.com/jesseduffield/gocui"
@@ -13,18 +14,128 @@ import (
 
 var cyclableViews = []string{"status", "files", "branches", "commits", "stash"}
 
-func (gui *Gui) refreshSidePanels(g *gocui.Gui) error {
-	if err := gui.refreshBranches(g); err != nil {
-		return err
+// models/views that we can refresh
+const (
+	COMMITS = iota
+	BRANCHES
+	FILES
+	STASH
+	REFLOG
+	TAGS
+	REMOTES
+	STATUS
+)
+
+const (
+	SYNC     = iota // wait until everything is done before returning
+	ASYNC           // return immediately, allowing each independent thing to update itself
+	BLOCK_UI        // wrap code in an update call to ensure UI updates all at once and keybindings aren't executed till complete
+)
+
+type refreshOptions struct {
+	then  func()
+	scope []int // e.g. []int{COMMITS, BRANCHES}. Leave empty to refresh everything
+	mode  int   // one of SYNC (default), ASYNC, and BLOCK_UI
+}
+
+func intArrToMap(arr []int) map[int]bool {
+	output := map[int]bool{}
+	for _, el := range arr {
+		output[el] = true
 	}
-	if err := gui.refreshFiles(); err != nil {
-		return err
-	}
-	if err := gui.refreshCommits(g); err != nil {
-		return err
+	return output
+}
+
+func (gui *Gui) refreshSidePanels(options refreshOptions) error {
+	wg := sync.WaitGroup{}
+
+	f := func() {
+		var scopeMap map[int]bool
+		if len(options.scope) == 0 {
+			scopeMap = intArrToMap([]int{COMMITS, BRANCHES, FILES, STASH, REFLOG, TAGS, REMOTES, STATUS})
+		} else {
+			scopeMap = intArrToMap(options.scope)
+		}
+
+		if scopeMap[COMMITS] || scopeMap[BRANCHES] || scopeMap[REFLOG] {
+			wg.Add(1)
+			func() {
+				if options.mode == ASYNC {
+					go gui.refreshCommits()
+				} else {
+					gui.refreshCommits()
+				}
+				wg.Done()
+			}()
+		}
+
+		if scopeMap[FILES] {
+			wg.Add(1)
+			func() {
+				if options.mode == ASYNC {
+					go gui.refreshFiles()
+				} else {
+					gui.refreshFiles()
+				}
+				wg.Done()
+			}()
+		}
+
+		if scopeMap[STASH] {
+			wg.Add(1)
+			func() {
+				if options.mode == ASYNC {
+					go gui.refreshStashEntries(gui.g)
+				} else {
+					gui.refreshStashEntries(gui.g)
+				}
+				wg.Done()
+			}()
+		}
+
+		if scopeMap[TAGS] {
+			wg.Add(1)
+			func() {
+				if options.mode == ASYNC {
+					go gui.refreshTags()
+				} else {
+					gui.refreshTags()
+				}
+				wg.Done()
+			}()
+		}
+
+		if scopeMap[REMOTES] {
+			wg.Add(1)
+			func() {
+				if options.mode == ASYNC {
+					go gui.refreshRemotes()
+				} else {
+					gui.refreshRemotes()
+				}
+				wg.Done()
+			}()
+		}
+
+		wg.Wait()
+
+		gui.refreshStatus()
+
+		if options.then != nil {
+			options.then()
+		}
 	}
 
-	return gui.refreshStashEntries(g)
+	if options.mode == BLOCK_UI {
+		gui.g.Update(func(g *gocui.Gui) error {
+			f()
+			return nil
+		})
+	} else {
+		f()
+	}
+
+	return nil
 }
 
 func (gui *Gui) nextView(g *gocui.Gui, v *gocui.View) error {
@@ -57,6 +168,9 @@ func (gui *Gui) nextView(g *gocui.Gui, v *gocui.View) error {
 	focusedView, err := g.View(focusedViewName)
 	if err != nil {
 		panic(err)
+	}
+	if err := gui.resetOrigin(gui.getMainView()); err != nil {
+		return err
 	}
 	return gui.switchFocus(g, v, focusedView)
 }
@@ -91,6 +205,9 @@ func (gui *Gui) previousView(g *gocui.Gui, v *gocui.View) error {
 	focusedView, err := g.View(focusedViewName)
 	if err != nil {
 		panic(err)
+	}
+	if err := gui.resetOrigin(gui.getMainView()); err != nil {
+		return err
 	}
 	return gui.switchFocus(g, v, focusedView)
 }
@@ -312,6 +429,11 @@ func (gui *Gui) getSearchView() *gocui.View {
 	return v
 }
 
+func (gui *Gui) getStatusView() *gocui.View {
+	v, _ := gui.g.View("status")
+	return v
+}
+
 func (gui *Gui) trimmedContent(v *gocui.View) string {
 	return strings.TrimSpace(v.Buffer())
 }
@@ -385,6 +507,16 @@ func (gui *Gui) renderPanelOptions() error {
 		}
 	}
 	return gui.renderGlobalOptions()
+}
+
+func (gui *Gui) renderGlobalOptions() error {
+	return gui.renderOptionsMap(map[string]string{
+		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.scrollUpMain"), gui.getKeyDisplay("universal.scrollDownMain")):                                                                                 gui.Tr.SLocalize("scroll"),
+		fmt.Sprintf("%s %s %s %s", gui.getKeyDisplay("universal.prevBlock"), gui.getKeyDisplay("universal.nextBlock"), gui.getKeyDisplay("universal.prevItem"), gui.getKeyDisplay("universal.nextItem")): gui.Tr.SLocalize("navigate"),
+		fmt.Sprintf("%s/%s", gui.getKeyDisplay("universal.return"), gui.getKeyDisplay("universal.quit")):                                                                                                 gui.Tr.SLocalize("close"),
+		gui.getKeyDisplay("universal.optionMenu"): gui.Tr.SLocalize("menu"),
+		"1-5": gui.Tr.SLocalize("jump"),
+	})
 }
 
 func (gui *Gui) isPopupPanel(viewName string) bool {

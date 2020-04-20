@@ -179,9 +179,17 @@ func (gui *Gui) createSpecificErrorPanel(message string, nextView *gocui.View, w
 
 	colorFunction := color.New(color.FgRed).SprintFunc()
 	coloredMessage := colorFunction(strings.TrimSpace(message))
+	if err := gui.refreshSidePanels(refreshOptions{mode: ASYNC}); err != nil {
+		return err
+	}
+
 	return gui.createConfirmationPanel(gui.g, nextView, true, gui.Tr.SLocalize("Error"), coloredMessage, nil, nil)
 }
 
-func (gui *Gui) createErrorPanel(g *gocui.Gui, message string) error {
-	return gui.createSpecificErrorPanel(message, g.CurrentView(), true)
+func (gui *Gui) createErrorPanel(message string) error {
+	return gui.createSpecificErrorPanel(message, gui.g.CurrentView(), true)
+}
+
+func (gui *Gui) surfaceError(err error) error {
+	return gui.createErrorPanel(err.Error())
 }

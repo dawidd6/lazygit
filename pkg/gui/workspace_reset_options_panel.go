@@ -16,10 +16,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.ResetAndClean(); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 		{
@@ -29,10 +29,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.DiscardAnyUnstagedFileChanges(); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 		{
@@ -42,10 +42,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.RemoveUntrackedFiles(); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 		{
@@ -55,10 +55,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.ResetSoft("HEAD"); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 		{
@@ -68,10 +68,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.ResetSoft("HEAD"); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 		{
@@ -81,10 +81,10 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 			},
 			onPress: func() error {
 				if err := gui.GitCommand.ResetHard("HEAD"); err != nil {
-					return gui.createErrorPanel(gui.g, err.Error())
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 	}

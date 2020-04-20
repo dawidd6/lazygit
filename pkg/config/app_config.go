@@ -283,6 +283,10 @@ keybinding:
     nextItem: '<down>'
     prevItem-alt: 'k'
     nextItem-alt: 'j'
+    prevPage: ','
+    nextPage: '.'
+    gotoTop: '<'
+    gotoBottom: '>'
     prevBlock: '<left>'
     nextBlock: '<right>'
     prevBlock-alt: 'h'
@@ -316,6 +320,8 @@ keybinding:
     prevScreenMode: '_'
     undo: 'z'
     redo: '<c-z>'
+    filteringMenu: <c-s>
+    diffingMenu: '<c-e>'
   status:
     checkForUpdate: 'u'
     recentRepos: '<enter>'
@@ -360,7 +366,6 @@ keybinding:
     cherryPickCopyRange: 'C'
     pasteCommits: 'v'
     tagCommit: 'T'
-    toggleDiffCommit: 'i'
     checkoutCommit: '<space>'
     resetCherryPick: '<c-R>'
   stash:

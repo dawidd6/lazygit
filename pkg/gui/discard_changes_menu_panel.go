@@ -5,7 +5,7 @@ import (
 )
 
 func (gui *Gui) handleCreateDiscardMenu(g *gocui.Gui, v *gocui.View) error {
-	file, err := gui.getSelectedFile(g)
+	file, err := gui.getSelectedFile()
 	if err != nil {
 		if err != gui.Errors.ErrNoFiles {
 			return err
@@ -18,9 +18,9 @@ func (gui *Gui) handleCreateDiscardMenu(g *gocui.Gui, v *gocui.View) error {
 			displayString: gui.Tr.SLocalize("discardAllChanges"),
 			onPress: func() error {
 				if err := gui.GitCommand.DiscardAllFileChanges(file); err != nil {
-					return err
+					return gui.surfaceError(err)
 				}
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		},
 	}
@@ -30,10 +30,10 @@ func (gui *Gui) handleCreateDiscardMenu(g *gocui.Gui, v *gocui.View) error {
 			displayString: gui.Tr.SLocalize("discardUnstagedChanges"),
 			onPress: func() error {
 				if err := gui.GitCommand.DiscardUnstagedFileChanges(file); err != nil {
-					return err
+					return gui.surfaceError(err)
 				}
 
-				return gui.refreshFiles()
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
 			},
 		})
 	}

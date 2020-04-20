@@ -9,7 +9,7 @@ import (
 
 func (gui *Gui) resetToRef(ref string, strength string, options commands.RunCommandOptions) error {
 	if err := gui.GitCommand.ResetToCommit(ref, strength, options); err != nil {
-		return gui.createErrorPanel(gui.g, err.Error())
+		return gui.surfaceError(err)
 	}
 
 	if err := gui.switchCommitsPanelContext("branch-commits"); err != nil {
@@ -21,13 +21,7 @@ func (gui *Gui) resetToRef(ref string, strength string, options commands.RunComm
 	// loading a heap of commits is slow so we limit them whenever doing a reset
 	gui.State.Panels.Commits.LimitCommits = true
 
-	if err := gui.refreshCommits(gui.g); err != nil {
-		return err
-	}
-	if err := gui.refreshFiles(); err != nil {
-		return err
-	}
-	if err := gui.refreshBranches(gui.g); err != nil {
+	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES, BRANCHES, REFLOG, COMMITS}}); err != nil {
 		return err
 	}
 	if err := gui.resetOrigin(gui.getCommitsView()); err != nil {

@@ -37,12 +37,6 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "CommitsTitle",
 			Other: "Commits",
 		}, &i18n.Message{
-			ID:    "CommitsDiffTitle",
-			Other: "Commits (specific diff mode)",
-		}, &i18n.Message{
-			ID:    "CommitsDiff",
-			Other: "select commit to diff with another commit",
-		}, &i18n.Message{
 			ID:    "StashTitle",
 			Other: "Stash",
 		}, &i18n.Message{
@@ -1062,6 +1056,81 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 		}, &i18n.Message{
 			ID:    "cantRedoWhileRebasing",
 			Other: "Can't redo while rebasing",
+		}, &i18n.Message{
+			ID:    "MustStashWarning",
+			Other: "Pulling a patch out into the index requires stashing and unstashing your changes. If something goes wrong, you'll be able to access your files from the stash. Continue?",
+		}, &i18n.Message{
+			ID:    "MustStashTitle",
+			Other: "Must stash",
+		}, &i18n.Message{
+			ID:    "ConfirmationTitle",
+			Other: "Confirmation Panel",
+		}, &i18n.Message{
+			ID:    "prevPage",
+			Other: "previous page",
+		}, &i18n.Message{
+			ID:    "nextPage",
+			Other: "next page",
+		}, &i18n.Message{
+			ID:    "gotoTop",
+			Other: "scroll to top",
+		}, &i18n.Message{
+			ID:    "gotoBottom",
+			Other: "scroll to bottom",
+		}, &i18n.Message{
+			ID:    "filteringBy",
+			Other: "filtering by",
+		}, &i18n.Message{
+			ID:    "(reset)",
+			Other: "(reset)",
+		}, &i18n.Message{
+			ID:    "openScopingMenu",
+			Other: "view scoping options",
+		}, &i18n.Message{
+			ID:    "filterBy",
+			Other: "filter by",
+		}, &i18n.Message{
+			ID:    "exitFilterMode",
+			Other: "stop filtering by path",
+		}, &i18n.Message{
+			ID:    "filterPathOption",
+			Other: "enter path to filter by",
+		}, &i18n.Message{
+			ID:    "enterFileName",
+			Other: "enter path:",
+		}, &i18n.Message{
+			ID:    "FilteringMenuTitle",
+			Other: "Filtering",
+		}, &i18n.Message{
+			ID:    "MustExitFilterModeTitle",
+			Other: "Command not available",
+		}, &i18n.Message{
+			ID:    "MustExitFilterModePrompt",
+			Other: "Command not available in filtered mode. Exit filtered mode?",
+		}, &i18n.Message{
+			ID:    "diff",
+			Other: "diff",
+		}, &i18n.Message{
+			ID:    "enterRefToDiff",
+			Other: "enter ref to diff",
+		}, &i18n.Message{
+			ID:    "enteRefName",
+			Other: "enter ref:",
+		}, &i18n.Message{
+			ID:    "exitDiffMode",
+			Other: "exit diff mode",
+		}, &i18n.Message{
+			ID:    "DiffingMenuTitle",
+			Other: "Diffing",
+		}, &i18n.Message{
+			ID:    "swapDiff",
+			Other: "reverse diff direction",
+		}, &i18n.Message{
+			ID:    "openDiffingMenu",
+			Other: "open diff menu",
+		}, &i18n.Message{
+			ID:    "showingGitDiff",
+			Other: "showing output for:",
 		},
 	)
 }

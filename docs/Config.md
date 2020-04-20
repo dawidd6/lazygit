@@ -53,6 +53,10 @@ Default path for the config file:
       nextItem: '<down>' # go one line down
       prevItem-alt: 'k' # go one line up
       nextItem-alt: 'j' # go one line down
+      prevPage: ',' # go to next page in list
+      nextPage: '.' # go to previous page in list
+      gotoTop: '<' # go to top of list
+      gotoBottom: '>' # go to bottom of list
       prevBlock: '<left>' # goto the previous block / panel
       nextBlock: '<right>' # goto the next block / panel
       prevBlock-alt: 'h' # goto the previous block / panel
@@ -85,6 +89,8 @@ Default path for the config file:
       prevScreenMode: '_'
       undo: 'z'
       redo: '<c-z>'
+      filteringMenu: <c-s>
+      diffingMenu: '<c-e>'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -128,7 +134,6 @@ Default path for the config file:
       cherryPickCopyRange: 'C'
       pasteCommits: 'v'
       tagCommit: 'T'
-      toggleDiffCommit: 'i'
       checkoutCommit: '<space>'
       resetCherryPick: '<c-R>'
     stash:

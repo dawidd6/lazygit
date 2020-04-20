@@ -42,6 +42,40 @@ func (lv *listView) handleLineChange(change int) error {
 	return lv.handleItemSelect(lv.gui.g, view)
 }
 
+func (lv *listView) handleNextPage(g *gocui.Gui, v *gocui.View) error {
+	view, err := lv.gui.g.View(lv.viewName)
+	if err != nil {
+		return nil
+	}
+	_, height := view.Size()
+	delta := height - 1
+	if delta == 0 {
+		delta = 1
+	}
+	return lv.handleLineChange(delta)
+}
+
+func (lv *listView) handleGotoTop(g *gocui.Gui, v *gocui.View) error {
+	return lv.handleLineChange(-lv.getItemsLength())
+}
+
+func (lv *listView) handleGotoBottom(g *gocui.Gui, v *gocui.View) error {
+	return lv.handleLineChange(lv.getItemsLength())
+}
+
+func (lv *listView) handlePrevPage(g *gocui.Gui, v *gocui.View) error {
+	view, err := lv.gui.g.View(lv.viewName)
+	if err != nil {
+		return nil
+	}
+	_, height := view.Size()
+	delta := height - 1
+	if delta == 0 {
+		delta = 1
+	}
+	return lv.handleLineChange(-delta)
+}
+
 func (lv *listView) handleClick(g *gocui.Gui, v *gocui.View) error {
 	if !lv.gui.isPopupPanel(lv.viewName) && lv.gui.popupPanelFocused() {
 		return nil
@@ -149,7 +183,7 @@ func (gui *Gui) getListViews() []*listView {
 		{
 			viewName:              "commits",
 			context:               "reflog-commits",
-			getItemsLength:        func() int { return len(gui.State.ReflogCommits) },
+			getItemsLength:        func() int { return len(gui.State.FilteredReflogCommits) },
 			getSelectedLineIdxPtr: func() *int { return &gui.State.Panels.ReflogCommits.SelectedLine },
 			handleFocus:           gui.handleReflogCommitSelect,
 			handleItemSelect:      gui.handleReflogCommitSelect,

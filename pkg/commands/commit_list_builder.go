@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -33,18 +34,16 @@ type CommitListBuilder struct {
 	OSCommand           *OSCommand
 	Tr                  *i18n.Localizer
 	CherryPickedCommits []*Commit
-	DiffEntries         []*Commit
 }
 
 // NewCommitListBuilder builds a new commit list builder
-func NewCommitListBuilder(log *logrus.Entry, gitCommand *GitCommand, osCommand *OSCommand, tr *i18n.Localizer, cherryPickedCommits []*Commit, diffEntries []*Commit) (*CommitListBuilder, error) {
+func NewCommitListBuilder(log *logrus.Entry, gitCommand *GitCommand, osCommand *OSCommand, tr *i18n.Localizer, cherryPickedCommits []*Commit) (*CommitListBuilder, error) {
 	return &CommitListBuilder{
 		Log:                 log,
 		GitCommand:          gitCommand,
 		OSCommand:           osCommand,
 		Tr:                  tr,
 		CherryPickedCommits: cherryPickedCommits,
-		DiffEntries:         diffEntries,
 	}, nil
 }
 
@@ -56,7 +55,7 @@ func (c *CommitListBuilder) extractCommitFromLine(line string) *Commit {
 	split := strings.Split(line, SEPARATION_CHAR)
 
 	sha := split[0]
-	date := split[1]
+	unixTimestamp := split[1]
 	author := split[2]
 	extraInfo := strings.TrimSpace(split[3])
 	message := strings.Join(split[4:], SEPARATION_CHAR)
@@ -70,25 +69,32 @@ func (c *CommitListBuilder) extractCommitFromLine(line string) *Commit {
 		}
 	}
 
+	unitTimestampInt, _ := strconv.Atoi(unixTimestamp)
+
 	return &Commit{
-		Sha:       sha,
-		Name:      message,
-		Tags:      tags,
-		ExtraInfo: extraInfo,
-		Date:      date,
-		Author:    author,
+		Sha:           sha,
+		Name:          message,
+		Tags:          tags,
+		ExtraInfo:     extraInfo,
+		UnixTimestamp: int64(unitTimestampInt),
+		Author:        author,
 	}
 }
 
+type GetCommitsOptions struct {
+	Limit      bool
+	FilterPath string
+}
+
 // GetCommits obtains the commits of the current branch
-func (c *CommitListBuilder) GetCommits(limit bool) ([]*Commit, error) {
+func (c *CommitListBuilder) GetCommits(options GetCommitsOptions) ([]*Commit, error) {
 	commits := []*Commit{}
 	var rebasingCommits []*Commit
 	rebaseMode, err := c.GitCommand.RebaseMode()
 	if err != nil {
 		return nil, err
 	}
-	if rebaseMode != "" {
+	if rebaseMode != "" && options.FilterPath == "" {
 		// here we want to also prepend the commits that we're in the process of rebasing
 		rebasingCommits, err = c.getRebasingCommits(rebaseMode)
 		if err != nil {
@@ -100,7 +106,7 @@ func (c *CommitListBuilder) GetCommits(limit bool) ([]*Commit, error) {
 	}
 
 	unpushedCommits := c.getUnpushedCommits()
-	cmd := c.getLogCmd(limit)
+	cmd := c.getLogCmd(options)
 
 	err = RunLineOutputCmd(cmd, func(line string) (bool, error) {
 		commit := c.extractCommitFromLine(line)
@@ -124,14 +130,6 @@ func (c *CommitListBuilder) GetCommits(limit bool) ([]*Commit, error) {
 	commits, err = c.setCommitMergedStatuses(commits)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, commit := range commits {
-		for _, entry := range c.DiffEntries {
-			if entry.Sha == commit.Sha {
-				commit.Status = "selected"
-			}
-		}
 	}
 
 	return commits, nil
@@ -299,11 +297,16 @@ func (c *CommitListBuilder) getUnpushedCommits() map[string]bool {
 }
 
 // getLog gets the git log.
-func (c *CommitListBuilder) getLogCmd(limit bool) *exec.Cmd {
+func (c *CommitListBuilder) getLogCmd(options GetCommitsOptions) *exec.Cmd {
 	limitFlag := ""
-	if limit {
+	if options.Limit {
 		limitFlag = "-300"
 	}
 
-	return c.OSCommand.ExecutableFromString(fmt.Sprintf("git log --oneline --pretty=format:\"%%H%s%%ar%s%%aN%s%%d%s%%s\" %s --abbrev=%d", SEPARATION_CHAR, SEPARATION_CHAR, SEPARATION_CHAR, SEPARATION_CHAR, limitFlag, 20))
+	filterFlag := ""
+	if options.FilterPath != "" {
+		filterFlag = fmt.Sprintf(" --follow -- %s", c.OSCommand.Quote(options.FilterPath))
+	}
+
+	return c.OSCommand.ExecutableFromString(fmt.Sprintf("git log --oneline --pretty=format:\"%%H%s%%at%s%%aN%s%%d%s%%s\" %s --abbrev=%d --date=unix %s", SEPARATION_CHAR, SEPARATION_CHAR, SEPARATION_CHAR, SEPARATION_CHAR, limitFlag, 20, filterFlag))
 }

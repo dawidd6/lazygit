@@ -8,7 +8,7 @@ import (
 
 func (gui *Gui) handleCreatePatchOptionsMenu(g *gocui.Gui, v *gocui.View) error {
 	if !gui.GitCommand.PatchManager.CommitSelected() {
-		return gui.createErrorPanel(gui.g, gui.Tr.SLocalize("NoPatchError"))
+		return gui.createErrorPanel(gui.Tr.SLocalize("NoPatchError"))
 	}
 
 	menuItems := []*menuItem{
@@ -22,7 +22,11 @@ func (gui *Gui) handleCreatePatchOptionsMenu(g *gocui.Gui, v *gocui.View) error 
 		},
 		{
 			displayString: "apply patch",
-			onPress:       gui.handleApplyPatch,
+			onPress:       func() error { return gui.handleApplyPatch(false) },
+		},
+		{
+			displayString: "apply patch in reverse",
+			onPress:       func() error { return gui.handleApplyPatch(true) },
 		},
 		{
 			displayString: "reset patch",
@@ -30,7 +34,7 @@ func (gui *Gui) handleCreatePatchOptionsMenu(g *gocui.Gui, v *gocui.View) error 
 		},
 	}
 
-	selectedCommit := gui.getSelectedCommit(gui.g)
+	selectedCommit := gui.getSelectedCommit()
 	if selectedCommit != nil && gui.GitCommand.PatchManager.CommitSha != selectedCommit.Sha {
 		// adding this option to index 1
 		menuItems = append(
@@ -59,8 +63,11 @@ func (gui *Gui) getPatchCommitIndex() int {
 }
 
 func (gui *Gui) validateNormalWorkingTreeState() (bool, error) {
-	if gui.State.WorkingTreeState != "normal" {
-		return false, gui.createErrorPanel(gui.g, gui.Tr.SLocalize("CantPatchWhileRebasingError"))
+	if gui.GitCommand.WorkingTreeState() != "normal" {
+		return false, gui.createErrorPanel(gui.Tr.SLocalize("CantPatchWhileRebasingError"))
+	}
+	if gui.GitCommand.WorkingTreeState() != "normal" {
+		return false, gui.createErrorPanel(gui.Tr.SLocalize("CantPatchWhileRebasingError"))
 	}
 	return true, nil
 }
@@ -113,22 +120,32 @@ func (gui *Gui) handlePullPatchIntoWorkingTree() error {
 		return err
 	}
 
-	return gui.WithWaitingStatus(gui.Tr.SLocalize("RebasingStatus"), func() error {
-		commitIndex := gui.getPatchCommitIndex()
-		err := gui.GitCommand.PullPatchIntoIndex(gui.State.Commits, commitIndex, gui.GitCommand.PatchManager)
-		return gui.handleGenericMergeCommandResult(err)
-	})
+	pull := func(stash bool) error {
+		return gui.WithWaitingStatus(gui.Tr.SLocalize("RebasingStatus"), func() error {
+			commitIndex := gui.getPatchCommitIndex()
+			err := gui.GitCommand.PullPatchIntoIndex(gui.State.Commits, commitIndex, gui.GitCommand.PatchManager, stash)
+			return gui.handleGenericMergeCommandResult(err)
+		})
+	}
+
+	if len(gui.trackedFiles()) > 0 {
+		return gui.createConfirmationPanel(gui.g, gui.g.CurrentView(), true, gui.Tr.SLocalize("MustStashTitle"), gui.Tr.SLocalize("MustStashWarning"), func(*gocui.Gui, *gocui.View) error {
+			return pull(true)
+		}, nil)
+	} else {
+		return pull(false)
+	}
 }
 
-func (gui *Gui) handleApplyPatch() error {
+func (gui *Gui) handleApplyPatch(reverse bool) error {
 	if err := gui.returnFocusFromLineByLinePanelIfNecessary(); err != nil {
 		return err
 	}
 
-	if err := gui.GitCommand.PatchManager.ApplyPatches(false); err != nil {
-		return gui.createErrorPanel(gui.g, err.Error())
+	if err := gui.GitCommand.PatchManager.ApplyPatches(reverse); err != nil {
+		return gui.surfaceError(err)
 	}
-	return gui.refreshSidePanels(gui.g)
+	return gui.refreshSidePanels(refreshOptions{mode: ASYNC})
 }
 
 func (gui *Gui) handleResetPatch() error {

@@ -37,7 +37,7 @@ type reflogAction struct {
 // Though we might support this later, hence the use of the CURRENT_REBASE action kind.
 func (gui *Gui) parseReflogForActions(onUserAction func(counter int, action reflogAction) (bool, error)) error {
 	counter := 0
-	reflogCommits := gui.State.ReflogCommits
+	reflogCommits := gui.State.FilteredReflogCommits
 	rebaseFinishCommitSha := ""
 	var action *reflogAction
 	for reflogCommitIdx, reflogCommit := range reflogCommits {
@@ -87,8 +87,8 @@ func (gui *Gui) reflogUndo(g *gocui.Gui, v *gocui.View) error {
 	undoEnvVars := []string{"GIT_REFLOG_ACTION=[lazygit undo]"}
 	undoingStatus := gui.Tr.SLocalize("UndoingStatus")
 
-	if gui.State.WorkingTreeState == "rebasing" {
-		return gui.createErrorPanel(gui.g, gui.Tr.SLocalize("cantUndoWhileRebasing"))
+	if gui.GitCommand.WorkingTreeState() == "rebasing" {
+		return gui.createErrorPanel(gui.Tr.SLocalize("cantUndoWhileRebasing"))
 	}
 
 	return gui.parseReflogForActions(func(counter int, action reflogAction) (bool, error) {
@@ -118,8 +118,8 @@ func (gui *Gui) reflogRedo(g *gocui.Gui, v *gocui.View) error {
 	redoEnvVars := []string{"GIT_REFLOG_ACTION=[lazygit redo]"}
 	redoingStatus := gui.Tr.SLocalize("RedoingStatus")
 
-	if gui.State.WorkingTreeState == "rebasing" {
-		return gui.createErrorPanel(gui.g, gui.Tr.SLocalize("cantRedoWhileRebasing"))
+	if gui.GitCommand.WorkingTreeState() == "rebasing" {
+		return gui.createErrorPanel(gui.Tr.SLocalize("cantRedoWhileRebasing"))
 	}
 
 	return gui.parseReflogForActions(func(counter int, action reflogAction) (bool, error) {
@@ -155,48 +155,38 @@ type handleHardResetWithAutoStashOptions struct {
 
 // only to be used in the undo flow for now
 func (gui *Gui) handleHardResetWithAutoStash(commitSha string, options handleHardResetWithAutoStashOptions) error {
-	// if we have any modified tracked files we need to ask the user if they want us to stash for them
-	dirtyWorkingTree := false
-	for _, file := range gui.State.Files {
-		if file.Tracked {
-			dirtyWorkingTree = true
-			break
-		}
-	}
-
 	reset := func() error {
 		if err := gui.resetToRef(commitSha, "hard", commands.RunCommandOptions{EnvVars: options.EnvVars}); err != nil {
-			return gui.createErrorPanel(gui.g, err.Error())
+			return gui.surfaceError(err)
 		}
 		return nil
 	}
 
+	// if we have any modified tracked files we need to ask the user if they want us to stash for them
+	dirtyWorkingTree := len(gui.trackedFiles()) > 0
 	if dirtyWorkingTree {
 		// offer to autostash changes
 		return gui.createConfirmationPanel(gui.g, gui.getBranchesView(), true, gui.Tr.SLocalize("AutoStashTitle"), gui.Tr.SLocalize("AutoStashPrompt"), func(g *gocui.Gui, v *gocui.View) error {
 			return gui.WithWaitingStatus(options.WaitingStatus, func() error {
 				if err := gui.GitCommand.StashSave(gui.Tr.SLocalize("StashPrefix") + commitSha); err != nil {
-					return gui.createErrorPanel(g, err.Error())
+					return gui.surfaceError(err)
 				}
 				if err := reset(); err != nil {
 					return err
 				}
 
 				if err := gui.GitCommand.StashDo(0, "pop"); err != nil {
-					if err := gui.refreshSidePanels(g); err != nil {
+					if err := gui.refreshSidePanels(refreshOptions{}); err != nil {
 						return err
 					}
-					return gui.createErrorPanel(g, err.Error())
+					return gui.surfaceError(err)
 				}
-				return gui.refreshSidePanels(g)
+				return nil
 			})
 		}, nil)
 	}
 
 	return gui.WithWaitingStatus(options.WaitingStatus, func() error {
-		if err := reset(); err != nil {
-			return err
-		}
-		return gui.refreshSidePanels(gui.g)
+		return reset()
 	})
 }

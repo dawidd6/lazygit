@@ -15,12 +15,12 @@ import (
 
 	"github.com/go-errors/errors"
 
+	gogit "github.com/go-git/go-git/v5"
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 	"github.com/sirupsen/logrus"
 	gitconfig "github.com/tcnksm/go-gitconfig"
-	gogit "gopkg.in/src-d/go-git.v4"
 )
 
 // this takes something like:
@@ -156,9 +156,7 @@ func findDotGitDir(stat func(string) (os.FileInfo, error), readFile func(filenam
 	return strings.TrimSpace(strings.TrimPrefix(fileContent, "gitdir: ")), nil
 }
 
-// GetStashEntries stash entries
-func (c *GitCommand) GetStashEntries() []*StashEntry {
-	// if we directly put this string in RunCommandWithOutput the compiler complains because it thinks it's a format string
+func (c *GitCommand) getUnfilteredStashEntries() []*StashEntry {
 	unescaped := "git stash list --pretty='%gs'"
 	rawString, _ := c.OSCommand.RunCommandWithOutput(unescaped)
 	stashEntries := []*StashEntry{}
@@ -168,11 +166,49 @@ func (c *GitCommand) GetStashEntries() []*StashEntry {
 	return stashEntries
 }
 
+// GetStashEntries stash entries
+func (c *GitCommand) GetStashEntries(filterPath string) []*StashEntry {
+	if filterPath == "" {
+		return c.getUnfilteredStashEntries()
+	}
+
+	unescaped := fmt.Sprintf("git stash list --name-only")
+	rawString, err := c.OSCommand.RunCommandWithOutput(unescaped)
+	if err != nil {
+		return c.getUnfilteredStashEntries()
+	}
+	stashEntries := []*StashEntry{}
+	var currentStashEntry *StashEntry
+	lines := utils.SplitLines(rawString)
+	isAStash := func(line string) bool { return strings.HasPrefix(line, "stash@{") }
+	re := regexp.MustCompile(`stash@\{(\d+)\}`)
+
+outer:
+	for i := 0; i < len(lines); i++ {
+		if !isAStash(lines[i]) {
+			continue
+		}
+		match := re.FindStringSubmatch(lines[i])
+		idx, err := strconv.Atoi(match[1])
+		if err != nil {
+			return c.getUnfilteredStashEntries()
+		}
+		currentStashEntry = stashEntryFromLine(lines[i], idx)
+		for i+1 < len(lines) && !isAStash(lines[i+1]) {
+			i++
+			if lines[i] == filterPath {
+				stashEntries = append(stashEntries, currentStashEntry)
+				continue outer
+			}
+		}
+	}
+	return stashEntries
+}
+
 func stashEntryFromLine(line string, index int) *StashEntry {
 	return &StashEntry{
-		Name:          line,
-		Index:         index,
-		DisplayString: line,
+		Name:  line,
+		Index: index,
 	}
 }
 
@@ -484,11 +520,7 @@ func (c *GitCommand) GitStatus() (string, error) {
 
 // IsInMergeState states whether we are still mid-merge
 func (c *GitCommand) IsInMergeState() (bool, error) {
-	output, err := c.OSCommand.RunCommandWithOutput("git status --untracked-files=all")
-	if err != nil {
-		return false, err
-	}
-	return strings.Contains(output, "conclude merge") || strings.Contains(output, "unmerged paths"), nil
+	return c.OSCommand.FileExists(fmt.Sprintf("%s/MERGE_HEAD", c.DotGitDir))
 }
 
 // RebaseMode returns "" for non-rebase mode, "normal" for normal rebase
@@ -573,8 +605,12 @@ func (c *GitCommand) Ignore(filename string) error {
 	return c.OSCommand.AppendLineToFile(".gitignore", filename)
 }
 
-func (c *GitCommand) ShowCmdStr(sha string) string {
-	return fmt.Sprintf("git show --color=%s --no-renames --stat -p %s", c.colorArg(), sha)
+func (c *GitCommand) ShowCmdStr(sha string, filterPath string) string {
+	filterPathArg := ""
+	if filterPath != "" {
+		filterPathArg = fmt.Sprintf(" -- %s", c.OSCommand.Quote(filterPath))
+	}
+	return fmt.Sprintf("git show --color=%s --no-renames --stat -p %s %s", c.colorArg(), sha, filterPathArg)
 }
 
 func (c *GitCommand) GetBranchGraphCmdStr(branchName string) string {
@@ -648,6 +684,7 @@ func (c *GitCommand) RunSkipEditorCommand(command string) error {
 	cmd.Env = append(
 		cmd.Env,
 		"LAZYGIT_CLIENT_COMMAND=EXIT_IMMEDIATELY",
+		"GIT_EDITOR="+lazyGitPath,
 		"EDITOR="+lazyGitPath,
 		"VISUAL="+lazyGitPath,
 	)
@@ -665,7 +702,10 @@ func (c *GitCommand) GenericMerge(commandType string, command string) error {
 		),
 	)
 	if err != nil {
-		return err
+		if !strings.Contains(err.Error(), "no rebase in progress") {
+			return err
+		}
+		c.Log.Warn(err)
 	}
 
 	// sometimes we need to do a sequence of things in a rebase but the user needs to
@@ -758,7 +798,7 @@ func (c *GitCommand) PrepareInteractiveRebaseCommand(baseSha string, todo string
 	)
 
 	if overrideEditor {
-		cmd.Env = append(cmd.Env, "EDITOR="+ex)
+		cmd.Env = append(cmd.Env, "GIT_EDITOR="+ex)
 	}
 
 	return cmd, nil
@@ -981,11 +1021,6 @@ func (c *GitCommand) ResetSoft(ref string) error {
 	return c.OSCommand.RunCommand("git reset --soft " + ref)
 }
 
-// DiffCommits show diff between commits
-func (c *GitCommand) DiffCommits(sha1, sha2 string) (string, error) {
-	return c.OSCommand.RunCommandWithOutput("git diff --color=%s --stat -p %s %s", c.colorArg(), sha1, sha2)
-}
-
 // CreateFixupCommit creates a commit that fixes up a previous commit
 func (c *GitCommand) CreateFixupCommit(sha string) error {
 	return c.OSCommand.RunCommand("git commit --fixup=%s", sha)
@@ -1120,33 +1155,37 @@ func (c *GitCommand) FetchRemote(remoteName string) error {
 	return c.OSCommand.RunCommand("git fetch %s", remoteName)
 }
 
-// GetNewReflogCommits only returns the new reflog commits since the given lastReflogCommit
+// GetReflogCommits only returns the new reflog commits since the given lastReflogCommit
 // if none is passed (i.e. it's value is nil) then we get all the reflog commits
-func (c *GitCommand) GetNewReflogCommits(lastReflogCommit *Commit) ([]*Commit, error) {
-	output, err := c.OSCommand.RunCommandWithOutput("git reflog --abbrev=20 --date=iso")
-	if err != nil {
-		// assume error means we have no reflog
-		return []*Commit{}, nil
+
+func (c *GitCommand) GetReflogCommits(lastReflogCommit *Commit, filterPath string) ([]*Commit, bool, error) {
+	commits := make([]*Commit, 0)
+	re := regexp.MustCompile(`(\w+).*HEAD@\{([^\}]+)\}: (.*)`)
+
+	filterPathArg := ""
+	if filterPath != "" {
+		filterPathArg = fmt.Sprintf(" --follow -- %s", c.OSCommand.Quote(filterPath))
 	}
 
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	commits := make([]*Commit, 0, len(lines))
-	re := regexp.MustCompile(`(\w+).*HEAD@\{([^\}]+)\}: (.*)`)
-	cmd := c.OSCommand.ExecutableFromString("git reflog --abbrev=20 --date=iso")
-	err = RunLineOutputCmd(cmd, func(line string) (bool, error) {
+	cmd := c.OSCommand.ExecutableFromString(fmt.Sprintf("git reflog --abbrev=20 --date=unix %s", filterPathArg))
+	onlyObtainedNewReflogCommits := false
+	err := RunLineOutputCmd(cmd, func(line string) (bool, error) {
 		match := re.FindStringSubmatch(line)
 		if len(match) <= 1 {
 			return false, nil
 		}
 
+		unixTimestamp, _ := strconv.Atoi(match[2])
+
 		commit := &Commit{
-			Sha:    match[1],
-			Name:   match[3],
-			Date:   match[2],
-			Status: "reflog",
+			Sha:           match[1],
+			Name:          match[3],
+			UnixTimestamp: int64(unixTimestamp),
+			Status:        "reflog",
 		}
 
-		if lastReflogCommit != nil && commit.Sha == lastReflogCommit.Sha && commit.Date == lastReflogCommit.Date {
+		if lastReflogCommit != nil && commit.Sha == lastReflogCommit.Sha && commit.UnixTimestamp == lastReflogCommit.UnixTimestamp {
+			onlyObtainedNewReflogCommits = true
 			// after this point we already have these reflogs loaded so we'll simply return the new ones
 			return true, nil
 		}
@@ -1155,10 +1194,10 @@ func (c *GitCommand) GetNewReflogCommits(lastReflogCommit *Commit) ([]*Commit, e
 		return false, nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return commits, nil
+	return commits, onlyObtainedNewReflogCommits, nil
 }
 
 func (c *GitCommand) ConfiguredPager() string {
@@ -1197,4 +1236,16 @@ func (c *GitCommand) colorArg() string {
 
 func (c *GitCommand) RenameBranch(oldName string, newName string) error {
 	return c.OSCommand.RunCommand("git branch --move %s %s", oldName, newName)
+}
+
+func (c *GitCommand) WorkingTreeState() string {
+	rebaseMode, _ := c.RebaseMode()
+	if rebaseMode != "" {
+		return "rebasing"
+	}
+	merging, _ := c.IsInMergeState()
+	if merging {
+		return "merging"
+	}
+	return "normal"
 }

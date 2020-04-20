@@ -685,13 +685,6 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 		},
 		{
 			ViewName:    "commits",
-			Key:         gui.getKey("universal.startSearch"),
-			Modifier:    gocui.ModNone,
-			Handler:     gui.handleOpenSearchForCommitsPanel,
-			Description: gui.Tr.SLocalize("startSearch"),
-		},
-		{
-			ViewName:    "commits",
 			Contexts:    []string{"branch-commits"},
 			Key:         gui.getKey("commits.squashDown"),
 			Modifier:    gocui.ModNone,
@@ -845,14 +838,6 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 		{
 			ViewName:    "commits",
 			Contexts:    []string{"branch-commits"},
-			Key:         gui.getKey("commits.toggleDiffCommit"),
-			Modifier:    gocui.ModNone,
-			Handler:     gui.handleToggleDiffCommit,
-			Description: gui.Tr.SLocalize("CommitsDiff"),
-		},
-		{
-			ViewName:    "commits",
-			Contexts:    []string{"branch-commits"},
 			Key:         gui.getKey("commits.tagCommit"),
 			Modifier:    gocui.ModNone,
 			Handler:     gui.handleTagCommit,
@@ -945,7 +930,7 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			ViewName: "information",
 			Key:      gocui.MouseLeft,
 			Modifier: gocui.ModNone,
-			Handler:  gui.handleDonate,
+			Handler:  gui.handleInfoClick,
 		},
 		{
 			ViewName:    "commitFiles",
@@ -988,6 +973,20 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Modifier:    gocui.ModNone,
 			Handler:     gui.handleEnterCommitFile,
 			Description: gui.Tr.SLocalize("enterFile"),
+		},
+		{
+			ViewName:    "",
+			Key:         gui.getKey("universal.filteringMenu"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleCreateFilteringMenuPanel,
+			Description: gui.Tr.SLocalize("openScopingMenu"),
+		},
+		{
+			ViewName:    "",
+			Key:         gui.getKey("universal.diffingMenu"),
+			Modifier:    gocui.ModNone,
+			Handler:     gui.handleCreateDiffingMenuPanel,
+			Description: gui.Tr.SLocalize("openDiffingMenu"),
 		},
 		{
 			ViewName: "secondary",
@@ -1510,21 +1509,39 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gocui.MouseWheelUp, Modifier: gocui.ModNone, Handler: listView.handlePrevLine},
 			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.nextItem-alt"), Modifier: gocui.ModNone, Handler: listView.handleNextLine},
 			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.nextItem"), Modifier: gocui.ModNone, Handler: listView.handleNextLine},
+			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.prevPage"), Modifier: gocui.ModNone, Handler: listView.handlePrevPage, Description: gui.Tr.SLocalize("prevPage")},
+			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.nextPage"), Modifier: gocui.ModNone, Handler: listView.handleNextPage, Description: gui.Tr.SLocalize("nextPage")},
+			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gui.getKey("universal.gotoTop"), Modifier: gocui.ModNone, Handler: listView.handleGotoTop, Description: gui.Tr.SLocalize("gotoTop")},
 			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gocui.MouseWheelDown, Modifier: gocui.ModNone, Handler: listView.handleNextLine},
 			{ViewName: listView.viewName, Contexts: []string{listView.context}, Key: gocui.MouseLeft, Modifier: gocui.ModNone, Handler: listView.handleClick},
 		}...)
 
-		// we need a specific keybinding for the commits panel beacuse it usually lazyloads commits
-		if listView.viewName != "commits" {
-			bindings = append(bindings, &Binding{
+		// the commits panel needs to lazyload things so it has a couple of its own handlers
+		openSearchHandler := gui.handleOpenSearch
+		gotoBottomHandler := listView.handleGotoBottom
+		if listView.viewName == "commits" {
+			openSearchHandler = gui.handleOpenSearchForCommitsPanel
+			gotoBottomHandler = gui.handleGotoBottomForCommitsPanel
+		}
+
+		bindings = append(bindings, []*Binding{
+			{
 				ViewName:    listView.viewName,
 				Contexts:    []string{listView.context},
 				Key:         gui.getKey("universal.startSearch"),
 				Modifier:    gocui.ModNone,
-				Handler:     gui.handleOpenSearch,
+				Handler:     openSearchHandler,
 				Description: gui.Tr.SLocalize("startSearch"),
-			})
-		}
+			},
+			{
+				ViewName:    listView.viewName,
+				Contexts:    []string{listView.context},
+				Key:         gui.getKey("universal.gotoBottom"),
+				Modifier:    gocui.ModNone,
+				Handler:     gotoBottomHandler,
+				Description: gui.Tr.SLocalize("gotoBottom"),
+			},
+		}...)
 	}
 
 	return bindings

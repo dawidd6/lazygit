@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/go-errors/errors"
+	gogit "github.com/go-git/go-git/v5"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
 	"github.com/jesseduffield/lazygit/pkg/test"
 	"github.com/stretchr/testify/assert"
-	gogit "gopkg.in/src-d/go-git.v4"
 )
 
 type fileInfoMock struct {
@@ -294,11 +294,9 @@ func TestGitCommandGetStashEntries(t *testing.T) {
 					{
 						0,
 						"WIP on add-pkg-commands-test: 55c6af2 increase parallel build",
-						"WIP on add-pkg-commands-test: 55c6af2 increase parallel build",
 					},
 					{
 						1,
-						"WIP on master: bb86a3f update github template",
 						"WIP on master: bb86a3f update github template",
 					},
 				}
@@ -314,7 +312,7 @@ func TestGitCommandGetStashEntries(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
 
-			s.test(gitCmd.GetStashEntries())
+			s.test(gitCmd.GetStashEntries(""))
 		})
 	}
 }
@@ -1095,75 +1093,6 @@ func TestGitCommandUnstageFile(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.command = s.command
 			s.test(gitCmd.UnStageFile("test.txt", s.tracked))
-		})
-	}
-}
-
-// TestGitCommandIsInMergeState is a function.
-func TestGitCommandIsInMergeState(t *testing.T) {
-	type scenario struct {
-		testName string
-		command  func(string, ...string) *exec.Cmd
-		test     func(bool, error)
-	}
-
-	scenarios := []scenario{
-		{
-			"An error occurred when running status command",
-			func(cmd string, args ...string) *exec.Cmd {
-				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"status", "--untracked-files=all"}, args)
-
-				return exec.Command("test")
-			},
-			func(isInMergeState bool, err error) {
-				assert.Error(t, err)
-				assert.False(t, isInMergeState)
-			},
-		},
-		{
-			"Is not in merge state",
-			func(cmd string, args ...string) *exec.Cmd {
-				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"status", "--untracked-files=all"}, args)
-				return exec.Command("echo")
-			},
-			func(isInMergeState bool, err error) {
-				assert.False(t, isInMergeState)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			"Command output contains conclude merge",
-			func(cmd string, args ...string) *exec.Cmd {
-				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"status", "--untracked-files=all"}, args)
-				return exec.Command("echo", "'conclude merge'")
-			},
-			func(isInMergeState bool, err error) {
-				assert.True(t, isInMergeState)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			"Command output contains unmerged paths",
-			func(cmd string, args ...string) *exec.Cmd {
-				assert.EqualValues(t, "git", cmd)
-				assert.EqualValues(t, []string{"status", "--untracked-files=all"}, args)
-				return exec.Command("echo", "'unmerged paths'")
-			},
-			func(isInMergeState bool, err error) {
-				assert.True(t, isInMergeState)
-				assert.NoError(t, err)
-			},
-		},
-	}
-
-	for _, s := range scenarios {
-		t.Run(s.testName, func(t *testing.T) {
-			gitCmd := NewDummyGitCommand()
-			gitCmd.OSCommand.command = s.command
-			s.test(gitCmd.IsInMergeState())
 		})
 	}
 }
@@ -2145,6 +2074,13 @@ func TestGitCommandSkipEditorCommand(t *testing.T) {
 			cmd.Env,
 			regexp.MustCompile("^EDITOR="),
 			"expected EDITOR to be set for a non-interactive external command",
+		)
+
+		test.AssertContainsMatch(
+			t,
+			cmd.Env,
+			regexp.MustCompile("^GIT_EDITOR="),
+			"expected GIT_EDITOR to be set for a non-interactive external command",
 		)
 
 		test.AssertContainsMatch(
