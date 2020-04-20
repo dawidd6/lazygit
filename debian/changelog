@@ -1,3 +1,66 @@
+lazygit (0.19-1) xenial; urgency=medium
+
+  [ Semro ]
+  * Fix link in README
+
+  [ Francisco Miamoto ]
+  * fix links on toc
+
+  [ Máximo Cuadros ]
+  * vendor: replace go-git package
+  * *: update go-git import
+
+  [ Jesse Duffield ]
+  * use GIT_EDITOR
+  * remove redundant fetch of reflog
+  * use reflogs from state to work out branch recencies
+  * more efficient refreshing
+  * use wait groups when refreshing
+  * more centralised handling of refreshing
+  * better refreshing for stash
+  * clean up signature
+  * better presentation of remotes
+  * more smart refreshing
+  * smart refreshing files
+  * stop switching focus to commit files view while staging line by line
+  * smarter refreshing for tags and remotes
+  * discard old reflog commits when in new context
+  * load reflog commits in two stages to speed up startup time
+  * actually don't even bother limiting
+  * in fact we don't need any of these options
+  * better documentation
+  * fix test
+  * remove dead code
+  * better error handling
+  * move working tree state function into git.go
+  * autostash changes when pulling file into index
+  * fix up some things with the patch handling stuff
+  * add workflow for auto-merging
+  * add keybindings for paging in list panels and jumping to top/bottom
+  * support lazyloading in commits view
+  * update cheatsheet
+  * fix width of half screen mode
+  * allow scoped mode where the commits/reflog/stash panels are scoped to a file
+  * rename to filtered mode
+  * properly reset gui state when restarting or coming back from a subprocess
+  * refactor gui.go
+  * reset state on each Run() call
+  * load reflog commits manually when in filter mode for branches panel
+  * split reflog commits into ReflogCommits and FilteredReflogCommits
+  * fix conflict race condition
+  * reset main's origin when cycling views
+  * remove old diff mode code
+  * add new diff mode
+  * don't support files until we understand the use case
+  * simplify things
+  * better keybinding
+  * some more UI logic
+  * unbold diff info
+  * add reverse patch option
+  * remove trash files
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Mon, 20 Apr 2020 10:43:50 +0200
+
 lazygit (0.18-1) xenial; urgency=medium
 
   [ Rui Chen ]
