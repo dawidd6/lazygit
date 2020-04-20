@@ -379,6 +379,18 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 			ID:    "SureDropStashEntry",
 			Other: "Are you sure you want to drop this stash entry?",
 		}, &i18n.Message{
+			ID:    "StashPop",
+			Other: "Stash pop",
+		}, &i18n.Message{
+			ID:    "SurePopStashEntry",
+			Other: "Are you sure you want to pop this stash entry?",
+		}, &i18n.Message{
+			ID:    "StashApply",
+			Other: "Stash apply",
+		}, &i18n.Message{
+			ID:    "SureApplyStashEntry",
+			Other: "Are you sure you want to apply this stash entry?",
+		}, &i18n.Message{
 			ID:    "NoStashTo",
 			Other: "No stash to {{.method}}",
 		}, &i18n.Message{
@@ -1131,6 +1143,15 @@ func addEnglish(i18nObject *i18n.Bundle) error {
 		}, &i18n.Message{
 			ID:    "showingGitDiff",
 			Other: "showing output for:",
+		}, &i18n.Message{
+			ID:    "copyCommitShaToClipboard",
+			Other: "copy commit SHA to clipboard",
+		}, &i18n.Message{
+			ID:    "copyBranchNameToClipboard",
+			Other: "copy branch name to clipboard",
+		}, &i18n.Message{
+			ID:    "commitPrefixPatternError",
+			Other: "Error in commitPrefix pattern",
 		},
 	)
 }

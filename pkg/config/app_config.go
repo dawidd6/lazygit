@@ -244,6 +244,7 @@ func GetDefaultConfig() []byte {
   scrollPastBottom: true
   mouseEvents: true
   skipUnstageLineWarning: false
+  skipStashWarning: true
   sidePanelWidth: 0.3333
   theme:
     lightTheme: false
@@ -264,6 +265,7 @@ git:
     useConfig: false
   merging:
     manualCommit: false
+    args: ""
   skipHookPrefix: 'WIP'
   autoFetch: true
 update:
@@ -322,6 +324,7 @@ keybinding:
     redo: '<c-z>'
     filteringMenu: <c-s>
     diffingMenu: '<c-e>'
+    copyToClipboard: '<c-o>'
   status:
     checkForUpdate: 'u'
     recentRepos: '<enter>'

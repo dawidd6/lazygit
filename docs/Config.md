@@ -28,6 +28,7 @@ Default path for the config file:
       show: true
     mouseEvents: true
     skipUnstageLineWarning: false
+    skipStashWarning: true
   git:
     paging:
       colorArg: always
@@ -35,6 +36,8 @@ Default path for the config file:
     merging:
       # only applicable to unix users
       manualCommit: false
+      # extra args passed to `git merge`, e.g. --no-ff
+      args: ""
     skipHookPrefix: WIP
     autoFetch: true
   update:
@@ -91,6 +94,7 @@ Default path for the config file:
       redo: '<c-z>'
       filteringMenu: <c-s>
       diffingMenu: '<c-e>'
+      copyToClipboard: '<c-o>'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -220,7 +224,7 @@ If you have issues with a light terminal theme where you can't read / see the te
 
 ## Keybindings
 
-For all possible keybinding options, check [Custom_Keybinding.md](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybinding.md)
+For all possible keybinding options, check [Custom_Keybindings.md](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md)
 
 ### Example Keybindings For Colemak Users
 
@@ -266,3 +270,19 @@ Where:
 - `gitDomain` stands for the domain used by git itself (i.e. the one present on clone URLs), e.g. `git.work.com`
 - `provider` is one of `github`, `bitbucket` or `gitlab`
 - `webDomain` is the URL where your git service exposes a web interface and APIs, e.g. `gitservice.work.com`
+
+## Predefined commit message prefix
+In situations where certain naming pattern is used for branches and commits, pattern can be used to populate
+commit message with prefix that is parsed from the branch name.
+
+Example:
+* Branch name: feature/AB-123
+* Commit message: [AB-123] Adding feature
+
+```yaml
+  git:
+    commitPrefixes:
+      my_project: # This is repository folder name
+        pattern: "^\\w+\\/(\\w+-\\w+)"
+        replace: "[$1] "
+```
