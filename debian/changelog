@@ -1,3 +1,17 @@
+lazygit (0.20.2-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * add handler for searching in menu
+
+  [ Glenn Vriesman ]
+  * fix: fixed yaml typo
+
+  [ Jesse Duffield ]
+  * handle comments in todo files
+  * totally screwed up the last commit
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Thu, 23 Apr 2020 10:25:23 +0200
+
 lazygit (0.20-1) xenial; urgency=medium
 
   [ Dawid Dziurla ]
