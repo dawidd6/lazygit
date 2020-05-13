@@ -441,6 +441,13 @@ func (c *GitCommand) Commit(message string, flags string) (*exec.Cmd, error) {
 	return nil, c.OSCommand.RunCommand(command)
 }
 
+// Get the subject of the HEAD commit
+func (c *GitCommand) GetHeadCommitMessage() (string, error) {
+	cmdStr := "git log -1 --pretty=%s"
+	message, err := c.OSCommand.RunCommandWithOutput(cmdStr)
+	return strings.TrimSpace(message), err
+}
+
 // AmendHead amends HEAD with whatever is staged in your working tree
 func (c *GitCommand) AmendHead() (*exec.Cmd, error) {
 	command := "git commit --amend --no-edit --allow-empty"
@@ -479,7 +486,7 @@ func (c *GitCommand) Push(branchName string, force bool, upstream string, args s
 
 // CatFile obtains the content of a file
 func (c *GitCommand) CatFile(fileName string) (string, error) {
-	return c.OSCommand.RunCommandWithOutput("cat %s", c.OSCommand.Quote(fileName))
+	return c.OSCommand.RunCommandWithOutput("%s %s", c.OSCommand.Platform.catCmd, c.OSCommand.Quote(fileName))
 }
 
 // StageFile stages a file

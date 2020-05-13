@@ -4,6 +4,7 @@ Default path for the config file:
 
 * Linux: `~/.config/jesseduffield/lazygit/config.yml`
 * MacOS: `~/Library/Application Support/jesseduffield/lazygit/config.yml`
+* Windows: `%APPDATA%\jesseduffield\lazygit\config.yml`
 
 ## Default
 
@@ -23,7 +24,7 @@ Default path for the config file:
       optionsTextColor:
         - blue
       selectedLineBgColor:
-        - blue
+        - bold
     commitLength:
       show: true
     mouseEvents: true
@@ -215,7 +216,18 @@ If you have issues with a light terminal theme where you can't read / see the te
       inactiveBorderColor:
         - black
       selectedLineBgColor:
-        - blue
+        - bold
+```
+
+## Struggling to see selected line
+
+If you struggle to see the selected line I recomment using the reverse attribute on selected lines like so:
+
+```yaml
+  gui:
+    theme:
+      selectedLineBgColor:
+        - reverse
 ```
 
 ## Example Coloring
