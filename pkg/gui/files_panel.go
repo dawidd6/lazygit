@@ -398,25 +398,6 @@ func (gui *Gui) refreshStateFiles() error {
 	return nil
 }
 
-func (gui *Gui) catSelectedFile(g *gocui.Gui) (string, error) {
-	item, err := gui.getSelectedFile()
-	if err != nil {
-		if err != gui.Errors.ErrNoFiles {
-			return "", err
-		}
-		return "", gui.newStringTask("main", gui.Tr.SLocalize("NoFilesDisplay"))
-	}
-	if item.Type != "file" {
-		return "", gui.newStringTask("main", gui.Tr.SLocalize("NotAFile"))
-	}
-	cat, err := gui.GitCommand.CatFile(item.Name)
-	if err != nil {
-		gui.Log.Error(err)
-		return "", gui.newStringTask("main", err.Error())
-	}
-	return cat, nil
-}
-
 func (gui *Gui) handlePullFiles(g *gocui.Gui, v *gocui.View) error {
 	// if we have no upstream branch we need to set that first
 	currentBranch := gui.currentBranch()
@@ -497,9 +478,13 @@ func (gui *Gui) pushFiles(g *gocui.Gui, v *gocui.View) error {
 			}
 		}
 
-		return gui.createPromptPanel(g, v, gui.Tr.SLocalize("EnterUpstream"), "origin "+currentBranch.Name, func(g *gocui.Gui, v *gocui.View) error {
-			return gui.pushWithForceFlag(g, v, false, gui.trimmedContent(v), "")
-		})
+		if gui.GitCommand.PushToCurrent {
+			return gui.pushWithForceFlag(g, v, false, "", "--set-upstream")
+		} else {
+			return gui.createPromptPanel(g, v, gui.Tr.SLocalize("EnterUpstream"), "origin "+currentBranch.Name, func(g *gocui.Gui, v *gocui.View) error {
+				return gui.pushWithForceFlag(g, v, false, gui.trimmedContent(v), "")
+			})
+		}
 	} else if currentBranch.Pullables == "0" {
 		return gui.pushWithForceFlag(g, v, false, "", "")
 	}
