@@ -1,3 +1,19 @@
+lazygit (0.20.4-1) xenial; urgency=medium
+
+  [ Dawid Dziurla ]
+  * workflows: update bumping action to v3
+
+  [ Jesse Duffield ]
+  * prevent flicker from bolding background of selected line
+  * check if user has configured to push to current by default
+  * additional password prompt regex
+  * fix https://github.com/jesseduffield/lazygit/issues/848
+  * allow creating branches off of remote branches
+  * fix race condition when scrolling to merge conflict
+  * allow user to scroll themselves inside merge panel
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Tue, 19 May 2020 14:17:24 +0200
+
 lazygit (0.20.3-1) xenial; urgency=medium
 
   [ Lars E ]
