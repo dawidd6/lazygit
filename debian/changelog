@@ -1,3 +1,43 @@
+lazygit (0.20.9-1) xenial; urgency=medium
+
+  [ Dima Kotik ]
+  * Better CWD check for a git repository.
+
+  [ Randshot ]
+  * add overrideGpg switch, which prevents lazygit from spawning a separate process when using GPG
+
+  [ David Chen ]
+  * Update example keybinding config for Colemak users
+
+  [ Jasper Mendiola ]
+  * add oneline-graph
+  * fix tests
+  * Rename appconfig to config
+  * Remove getLocalGitConfig
+
+  [ Randshot ]
+  * fix platform specific quoting when using GPG fixes #620
+  * fix 'Commit using gpg' test
+  * fix 'Amend commit using gpg' test
+
+  [ Pranav Shikarpur ]
+  * Added ENTRYPOINT to Dockerfile to jump directly into lazy git while running the docker container
+
+  [ Randshot ]
+  * add overrideGpg switch to Config.md
+  * add quotes around the git commit command on non-windows systems
+  * factor out duplicate code into 'ShellCommandFromString'
+
+  [ Dawid Dziurla ]
+  * goreleaser: fix deprecation and comment
+
+  [ Randshot ]
+  * use strconv for quoting in 'GitCommand.Commit' and 'OSCommand.ShellCommandFromString' use raw strings for the escaped quotes in 'os_default_platform.go' and 'os_windows.go'
+  * revert changes to 'os_default_platform.go' and 'os_windows.go'
+  * fix TestGitCommandCommit test
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Sun, 23 Aug 2020 12:34:01 +0200
+
 lazygit (0.20.4-1) xenial; urgency=medium
 
   [ Dawid Dziurla ]
