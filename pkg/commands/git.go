@@ -435,6 +435,11 @@ func (c *GitCommand) AbortMerge() error {
 // usingGpg tells us whether the user has gpg enabled so that we can know
 // whether we need to run a subprocess to allow them to enter their password
 func (c *GitCommand) usingGpg() bool {
+	overrideGpg := c.Config.GetUserConfig().GetBool("git.overrideGpg")
+	if overrideGpg {
+		return false
+	}
+
 	gpgsign, _ := c.getLocalGitConfig("commit.gpgsign")
 	if gpgsign == "" {
 		gpgsign, _ = c.getGlobalGitConfig("commit.gpgsign")
@@ -446,9 +451,9 @@ func (c *GitCommand) usingGpg() bool {
 
 // Commit commits to git
 func (c *GitCommand) Commit(message string, flags string) (*exec.Cmd, error) {
-	command := fmt.Sprintf("git commit %s -m %s", flags, c.OSCommand.Quote(message))
+	command := fmt.Sprintf("git commit %s -m %s", flags, strconv.Quote(message))
 	if c.usingGpg() {
-		return c.OSCommand.PrepareSubProcess(c.OSCommand.Platform.shell, c.OSCommand.Platform.shellArg, command), nil
+		return c.OSCommand.ShellCommandFromString(command), nil
 	}
 
 	return nil, c.OSCommand.RunCommand(command)
@@ -465,7 +470,7 @@ func (c *GitCommand) GetHeadCommitMessage() (string, error) {
 func (c *GitCommand) AmendHead() (*exec.Cmd, error) {
 	command := "git commit --amend --no-edit --allow-empty"
 	if c.usingGpg() {
-		return c.OSCommand.PrepareSubProcess(c.OSCommand.Platform.shell, c.OSCommand.Platform.shellArg, command), nil
+		return c.OSCommand.ShellCommandFromString(command), nil
 	}
 
 	return nil, c.OSCommand.RunCommand(command)
@@ -635,7 +640,11 @@ func (c *GitCommand) ShowCmdStr(sha string, filterPath string) string {
 }
 
 func (c *GitCommand) GetBranchGraphCmdStr(branchName string) string {
-	return fmt.Sprintf("git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium %s --", branchName)
+	branchLogCmdTemplate := c.Config.GetUserConfig().GetString("git.branchLogCmd")
+	templateValues := map[string]string{
+		"branchName": branchName,
+	}
+	return utils.ResolvePlaceholderString(branchLogCmdTemplate, templateValues)
 }
 
 // GetRemoteURL returns current repo remote url

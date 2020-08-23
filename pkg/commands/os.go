@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -116,6 +117,20 @@ func (c *OSCommand) ExecutableFromString(commandStr string) *exec.Cmd {
 	cmd := c.command(splitCmd[0], splitCmd[1:]...)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 	return cmd
+}
+
+// ShellCommandFromString takes a string like `git commit` and returns an executable shell command for it
+func (c *OSCommand) ShellCommandFromString(commandStr string) *exec.Cmd {
+	quotedCommand := ""
+	// Windows does not seem to like quotes around the command
+	if c.Platform.os == "windows" {
+		quotedCommand = commandStr
+	} else {
+		quotedCommand = strconv.Quote(commandStr)
+	}
+
+	shellCommand := fmt.Sprintf("%s %s %s", c.Platform.shell, c.Platform.shellArg, quotedCommand)
+	return c.ExecutableFromString(shellCommand)
 }
 
 // RunCommandWithOutputLive runs RunCommandWithOutputLiveWrapper
