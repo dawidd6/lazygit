@@ -1,3 +1,235 @@
+lazygit (0.22.1-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * prompt to commit all files if committing with no staged files
+  * prompt to create new branch if branch not found
+
+  [ Gadzhi Kharkharov ]
+  * add solus linux installation info
+
+  [ Jesse Duffield ]
+  * Decouple escaping from quitting
+  * better logic for staging a renamed file
+  * allow editing commit files
+
+  [ Axel Navarro ]
+  * Add tab keybinding in commit message
+
+  [ Jesse Duffield ]
+  * cleanup
+  * allow renames to be discarded
+  * follow cursor when staging and unstaging a file rename
+
+  [ mjarkk ]
+  * Update dutch translations
+
+  [ Jesse Duffield ]
+  * simplify patch modifier interface
+  * minor cleanup
+  * pass callback directly
+  * update naming
+  * support multiple modes of git pull
+  * update config
+  * minor refactor
+  * stop pulling in general
+  * lowercase function name
+  * rename arg
+  * allow entering a password when fast forwarding another branch
+  * use remote prefixed branch name when merging remote branch
+  * accept umlaut keybindings
+  * immediately quit when pressing q in diff or filter mode
+  * allow rebasing onto remote branch
+  * support force push after failure
+  * refactor how we handle layouts
+  * add portrait mode for when the window is really tall
+  * move some things around
+  * some more changes
+  * softcode cyclable views
+  * more work on new layout functionality
+  * centralise logic for information section
+  * more lenient for switching into portrait mode
+  * set minimum confirmation box width
+  * support accordian mode i.e. expanding focused side panels
+  * allow configurable main panel split
+  * move box layout stuff into its own package
+  * add specs to boxlayout package
+  * allow opening files on the selected line in the staging panel
+  * move patch stuff into its own package
+  * update cheatsheet
+  * clean up interface for popup panels
+  * rename
+  * fix branches select sig
+  * fix remotes select sig
+  * fix remote branches select sig
+  * menu view
+  * status view
+  * files view
+  * more removing of g and v
+  * more removing of g
+  * refactor list view
+  * remove anonymous reporting popup cos we dont do it anymore anyway
+  * better popups
+  * move cursor to right when using auto prefix
+  * prefill commit reword editor
+  * support multi word editor config
+  * add keybinding to create new branch off of commit
+  * support opening lazygit outside a git directory
+  * allow overriding default confirm/escape keybindings
+  * remove space as keybinding for confirmation panel
+  * Update README.md
+
+  [ mjarkk ]
+  * Add GitUI to alternatives in readme
+
+  [ Jesse Duffield ]
+  * centralise some list view code
+  * WIP
+  * WIP
+  * WIP
+  * remove previous view
+  * standardise getting selected item
+  * small things
+  * WIP
+  * return nil when no file selected
+  * no need to set views on top anymore
+  * hide view if not specified in dimensions object
+  * dont check for error when sending view to bottom
+  * lots more stuff
+  * minor update
+  * move context specific keybindings into context file
+  * rename context file
+  * move into list context file
+  * better logic for taking focus away from popup panels
+  * centralise split main panel code
+  * WIP: standardising how we render to main
+  * WIP
+  * WIP
+  * WIP
+  * more standardisation
+  * concurrent-safe handling of context state
+  * centralise setting of main views context
+  * stop crash due to context stack not being initialized
+  * introduce new approach to handling tab states
+  * prepare for OnRender prop
+  * good progress
+  * more standardisation of rendering
+  * WIP
+  * WIP
+  * more stuff
+  * WIP
+  * WIP
+  * update naming to refer to context
+  * some more things
+  * more standardisation
+  * standardise diffmode
+  * some more standardisation for diffing
+  * use camelCase
+  * remove comment
+  * WIP
+  * use interface for panel state rather than pointer
+  * rename to SelectedLineIdx
+  * WIP constants for context keys
+  * statically define context keys
+  * remove unnecessary function
+  * stop logging stack
+  * allowing commit files to be viewed in reflog as well
+  * commit files kind of generalised
+  * slightly better
+  * rename Sha to parent now that we're also considering stash entries
+  * generalise patch building stuff
+  * only show rebasey commands on a local commit when patch building
+  * better menu item name
+  * refactor
+  * missed a spot
+  * more
+  * don't panic
+  * remove clipboard option for now because we need a better way of doing it
+  * remove sdump
+  * escape patch building mode on hitting escape at the top level
+  * only return focus if we already have it
+  * show when building patch
+  * add sub commit context
+  * allow getting the current item generically
+  * when toggling files reset patch manager if patch ends up empty
+  * rename to make way for a generic function name
+  * genericise creating new branches off things
+  * try allowing creating branches off the stash too
+  * add description field to ListItem interface
+  * move into more appropriate file
+  * more cherry picking code into its own file
+  * refactor how we handle different modes
+  * better handling of our different modes and also cherry picking
+  * more cherry picking stuff, mostly around the reflog
+  * centralise code for copying to clipboard
+  * support drilling down into the files of a diff
+  * deal with the fact that a nil wrapped in an interface is not equal to nil
+  * handle diffing and filtering by file in commit files view
+  * faster patch manager
+  * stop loading all the diffs at once now that we load them as we go
+  * don't needlessly load every file
+  * minor rename
+  * support creating patches from files in diff mode
+  * cleanup now that we're always using the same diff command
+  * remove test
+  * remove todo comment
+  * comment these things out because we're not using them yet
+  * unused method
+  * more standardising modes
+  * more accurate comment
+  * carry more mode state across after returning from subprocess
+  * use actual keys
+  * remove dead code
+  * cleanup of list context file
+  * minor refactor
+  * cleanup
+  * ensure there is always a current context
+  * use constants
+  * centralise logic for rendering options map
+  * fix logic for entering merging panel
+  * prevent spamming pull or push buttons
+  * fix up patch manager
+  * run task for appropriate view
+  * attempt at fixing bad lazyloading
+  * use context to return to the correct view
+  * allow explicitly managing focus
+  * we've now flipped the boolean
+  * always reset branch selected index when creating new branch
+  * hide secondary view when escaping patch building panel
+  * prefill remote edit prompts
+  * format
+  * show file statuses in commit files view
+  * better handling of there being no commit files
+  * enlargen stash window when its focused
+  * rename Status to PatchStatus
+  * check for missing view when scrolling
+  * safer getting of branch
+  * set keybindings after initialising views
+  * bump gocui to ensure no crash on startup
+  * when in the remote branches view, prefill name for creating branch off of remote branch
+  * fix focus change on merge popup return
+  * allow spamming the p key
+  * Return whether the context has a parent or not along with that parent
+  * support alacritty
+  * prevent moving cursor past last character in prompt modal
+  * prevent moving cursor past last character in prompt modal
+  * ignore warning messages about files when obtaining file statuses
+  * add log when git status errors
+  * bump creack
+  * do not reset cursor unless previous file has moved position
+  * better keybinding ('W') for viewing diff
+
+  [ Dawid Dziurla ]
+  * workflows: match every branch
+  * workflows: run CI on master or pull request only
+
+  [ Jesse Duffield ]
+  * use new branch logic when 'checking out' remote branch
+  * Remove tab keybinding for cycling tab
+  * use clipboard package to handle clipboard stuff
+  * do not create error panel for sentinel errors
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Wed, 26 Aug 2020 11:03:47 +0200
+
 lazygit (0.20.9-1) xenial; urgency=medium
 
   [ Dima Kotik ]
