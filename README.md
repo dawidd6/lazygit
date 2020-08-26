@@ -1,6 +1,11 @@
-# lazygit
+<p align="center">
+  <img src="https://i.imgur.com/oYB7Cj8.png">
+</p>
 
 ![CI](https://github.com/jesseduffield/lazygit/workflows/Continuous%20Integration/badge.svg) [![Go Report Card](https://goreportcard.com/badge/github.com/jesseduffield/lazygit)](https://goreportcard.com/report/github.com/jesseduffield/lazygit) [![GolangCI](https://golangci.com/badges/github.com/jesseduffield/lazygit.svg)](https://golangci.com) [![GoDoc](https://godoc.org/github.com/jesseduffield/lazygit?status.svg)](http://godoc.org/github.com/jesseduffield/lazygit) [![GitHub tag](https://img.shields.io/github/tag/jesseduffield/lazygit.svg)]() [![TODOs](https://badgen.net/https/api.tickgit.com/badgen/github.com/jesseduffield/lazygit)](https://www.tickgit.com/browse?repo=github.com/jesseduffield/lazygit)
+
+
+
 
 A simple terminal UI for git commands, written in Go with the [gocui](https://github.com/jroimartin/gocui "gocui") library.
 
@@ -21,6 +26,7 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
   - [Scoop (Windows)](#scoop-windows)
   - [Arch Linux](#arch-linux)
   - [Fedora and CentOS 7](#fedora-and-centos-7)
+  - [Solus Linux](#solus-linux)
   - [FreeBSD](#freebsd)
   - [Conda](#conda)
   - [Go](#go)
@@ -123,6 +129,12 @@ Packages for Fedora and CentOS 7 are available via [Copr](https://copr.fedorainf
 ```sh
 sudo dnf copr enable atim/lazygit -y
 sudo dnf install lazygit
+```
+
+### Solus Linux
+
+```sh
+sudo eopkg install lazygit
 ```
 
 ### FreeBSD
@@ -253,4 +265,5 @@ If you want to see what I (Jesse) am up to in terms of development, follow me on
 
 If you find that lazygit doesn't quite satisfy your requirements, these may be a better fit:
 
+- [GitUI](https://github.com/Extrawurst/gitui)
 - [tig](https://github.com/jonas/tig)

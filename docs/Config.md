@@ -14,6 +14,8 @@ Default path for the config file:
     scrollHeight: 2 # how many lines you scroll by
     scrollPastBottom: true # enable scrolling past the bottom
     sidePanelWidth: 0.3333 # number from 0 to 1
+    expandFocusedSidePanel: false
+    mainPanelSplitMode: 'flexible' # one of 'horizontal' | 'flexible' | 'vertical'
     theme:
       lightTheme: false # For terminals with a light background
       activeBorderColor:
@@ -41,6 +43,8 @@ Default path for the config file:
       manualCommit: false
       # extra args passed to `git merge`, e.g. --no-ff
       args: ""
+    pull:
+      mode: 'merge' # one of 'merge' | 'rebase' | 'ff-only'
     skipHookPrefix: WIP
     autoFetch: true
     branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
@@ -50,6 +54,8 @@ Default path for the config file:
     days: 14 # how often an update is checked for
   reporting: 'undetermined' # one of: 'on' | 'off' | 'undetermined'
   confirmOnQuit: false
+  # determines whether hitting 'esc' will quit the application when there is nothing to cancel/close
+  quitOnTopLevelReturn: true
   keybinding:
     universal:
       quit: 'q'
@@ -75,6 +81,8 @@ Default path for the config file:
       optionMenu-alt1: '?' # show help menu
       select: '<space>'
       goInto: '<enter>'
+      confirm: '<enter>'
+      confirm-alt1: 'y'
       remove: 'd'
       new: 'n'
       edit: 'e'
@@ -98,7 +106,8 @@ Default path for the config file:
       undo: 'z'
       redo: '<c-z>'
       filteringMenu: '<c-s>'
-      diffingMenu: '<c-e>'
+      diffingMenu: 'W'
+      diffingMenu-alt: '<c-e>' # deprecated
       copyToClipboard: '<c-o>'
     status:
       checkForUpdate: 'u'
@@ -185,7 +194,7 @@ for users of VSCode
 
 ```yaml
   os:
-    openCommand: 'code -r {{filename}}'
+    openCommand: 'code -rg {{filename}}'
 ```
 
 ## Color Attributes
