@@ -1,3 +1,23 @@
+lazygit (0.23.5-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * more password checks on commands that talk to the remote
+
+  [ nullawhale ]
+  * Copy a commit message to clipboard: Changes to latest version
+
+  [ Jesse Duffield ]
+  * preserve width of side panel when main view split unless window is wide enough
+  * support rebinding confirm/newline keys in editor
+
+  [ Dawid Dziurla ]
+  * workflows: update PPA repo as part of CD process
+  * utils: ReplaceAll -> Replace
+  * workflows: run CD on Ubuntu 20.04
+  * workflows: don't sign commit
+
+ --  <runner@fv-az193.3pvolxcpcztu3ic5y2mhkwl54d.bx.internal.cloudapp.net>  Tue, 13 Oct 2020 22:07:59 +0000
+
 lazygit (0.23.2-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
