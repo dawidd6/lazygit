@@ -3,11 +3,12 @@ package gui
 import (
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
+	"github.com/jesseduffield/lazygit/pkg/commands/models"
 )
 
 // list panel functions
 
-func (gui *Gui) getSelectedSubCommit() *commands.Commit {
+func (gui *Gui) getSelectedSubCommit() *models.Commit {
 	selectedLine := gui.State.Panels.SubCommits.SelectedLineIdx
 	commits := gui.State.SubCommits
 	if selectedLine == -1 || len(commits) == 0 {
@@ -45,8 +46,8 @@ func (gui *Gui) handleCheckoutSubCommit(g *gocui.Gui, v *gocui.View) error {
 	}
 
 	err := gui.ask(askOpts{
-		title:  gui.Tr.SLocalize("checkoutCommit"),
-		prompt: gui.Tr.SLocalize("SureCheckoutThisCommit"),
+		title:  gui.Tr.LcCheckoutCommit,
+		prompt: gui.Tr.SureCheckoutThisCommit,
 		handleConfirm: func() error {
 			return gui.handleCheckoutRef(commit.Sha, handleCheckoutRefOptions{})
 		},
@@ -77,7 +78,7 @@ func (gui *Gui) handleViewSubCommitFiles() error {
 
 func (gui *Gui) switchToSubCommitsContext(refName string) error {
 	// need to populate my sub commits
-	builder := commands.NewCommitListBuilder(gui.Log, gui.GitCommand, gui.OSCommand, gui.Tr, gui.State.Modes.CherryPicking.CherryPickedCommits)
+	builder := commands.NewCommitListBuilder(gui.Log, gui.GitCommand, gui.OSCommand, gui.Tr)
 
 	commits, err := builder.GetCommits(
 		commands.GetCommitsOptions{

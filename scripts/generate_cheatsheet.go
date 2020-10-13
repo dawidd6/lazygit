@@ -51,8 +51,44 @@ func writeString(file *os.File, str string) {
 }
 
 func localisedTitle(mApp *app.App, str string) string {
-	viewTitle := strings.Title(str) + "Title"
-	return mApp.Tr.SLocalize(viewTitle)
+	tr := mApp.Tr
+
+	contextTitleMap := map[string]string{
+		"global":         tr.GlobalTitle,
+		"navigation":     tr.NavigationTitle,
+		"branches":       tr.BranchesTitle,
+		"localBranches":  tr.LocalBranchesTitle,
+		"files":          tr.FilesTitle,
+		"status":         tr.StatusTitle,
+		"submodules":     tr.SubmodulesTitle,
+		"subCommits":     tr.SubCommitsTitle,
+		"remoteBranches": tr.RemoteBranchesTitle,
+		"remotes":        tr.RemotesTitle,
+		"reflogCommits":  tr.ReflogCommitsTitle,
+		"tags":           tr.TagsTitle,
+		"commitFiles":    tr.CommitFilesTitle,
+		"commitMessage":  tr.CommitMessageTitle,
+		"commits":        tr.CommitsTitle,
+		"confirmation":   tr.ConfirmationTitle,
+		"credentials":    tr.CredentialsTitle,
+		"information":    tr.InformationTitle,
+		"main":           tr.MainTitle,
+		"patchBuilding":  tr.PatchBuildingTitle,
+		"merging":        tr.MergingTitle,
+		"normal":         tr.NormalTitle,
+		"staging":        tr.StagingTitle,
+		"menu":           tr.MenuTitle,
+		"search":         tr.SearchTitle,
+		"secondary":      tr.SecondaryTitle,
+		"stash":          tr.StashTitle,
+	}
+
+	title, ok := contextTitleMap[str]
+	if !ok {
+		panic(fmt.Sprintf("title not found for %s", str))
+	}
+
+	return title
 }
 
 func formatTitle(title string) string {
@@ -72,13 +108,31 @@ func getBindingSections(mApp *app.App) []*bindingSection {
 	bindings := mApp.Gui.GetInitialKeybindings()
 
 	type contextAndViewType struct {
-		context  string
-		viewName string
+		subtitle string
+		title    string
 	}
 
 	contextAndViewBindingMap := map[contextAndViewType][]*gui.Binding{}
 
+outer:
 	for _, binding := range bindings {
+		if binding.Tag == "navigation" {
+			key := contextAndViewType{subtitle: "", title: "navigation"}
+			existing := contextAndViewBindingMap[key]
+			if existing == nil {
+				contextAndViewBindingMap[key] = []*gui.Binding{binding}
+			} else {
+				for _, navBinding := range contextAndViewBindingMap[key] {
+					if navBinding.Description == binding.Description {
+						continue outer
+					}
+				}
+				contextAndViewBindingMap[key] = append(contextAndViewBindingMap[key], binding)
+			}
+
+			continue outer
+		}
+
 		contexts := []string{}
 		if len(binding.Contexts) == 0 {
 			contexts = append(contexts, "")
@@ -87,7 +141,7 @@ func getBindingSections(mApp *app.App) []*bindingSection {
 		}
 
 		for _, context := range contexts {
-			key := contextAndViewType{context: context, viewName: binding.ViewName}
+			key := contextAndViewType{subtitle: context, title: binding.ViewName}
 			existing := contextAndViewBindingMap[key]
 			if existing == nil {
 				contextAndViewBindingMap[key] = []*gui.Binding{binding}
@@ -111,34 +165,40 @@ func getBindingSections(mApp *app.App) []*bindingSection {
 	sort.Slice(groupedBindings, func(i, j int) bool {
 		first := groupedBindings[i].contextAndView
 		second := groupedBindings[j].contextAndView
-		if first.viewName == "" {
+		if first.title == "" {
 			return true
 		}
-		if second.viewName == "" {
+		if second.title == "" {
 			return false
 		}
-		return first.viewName < second.viewName || (first.viewName == second.viewName && first.context < second.context)
+		if first.title == "navigation" {
+			return true
+		}
+		if second.title == "navigation" {
+			return false
+		}
+		return first.title < second.title || (first.title == second.title && first.subtitle < second.subtitle)
 	})
 
 	for _, group := range groupedBindings {
 		contextAndView := group.contextAndView
 		contextBindings := group.bindings
-		mApp.Log.Warn("viewname: " + contextAndView.viewName + ", context: " + contextAndView.context)
-		viewName := contextAndView.viewName
+		mApp.Log.Info("viewname: " + contextAndView.title + ", context: " + contextAndView.subtitle)
+		viewName := contextAndView.title
 		if viewName == "" {
 			viewName = "global"
 		}
 		translatedView := localisedTitle(mApp, viewName)
 		var title string
-		if contextAndView.context == "" {
-			addendum := " " + mApp.Tr.SLocalize("Panel")
-			if viewName == "global" {
+		if contextAndView.subtitle == "" {
+			addendum := " " + mApp.Tr.Panel
+			if viewName == "global" || viewName == "navigation" {
 				addendum = ""
 			}
 			title = fmt.Sprintf("%s%s", translatedView, addendum)
 		} else {
-			translatedContextName := localisedTitle(mApp, contextAndView.context)
-			title = fmt.Sprintf("%s %s (%s)", translatedView, mApp.Tr.SLocalize("Panel"), translatedContextName)
+			translatedContextName := localisedTitle(mApp, contextAndView.subtitle)
+			title = fmt.Sprintf("%s %s (%s)", translatedView, mApp.Tr.Panel, translatedContextName)
 		}
 
 		for _, binding := range contextBindings {
@@ -170,7 +230,7 @@ func addBinding(title string, bindingSections []*bindingSection, binding *gui.Bi
 }
 
 func formatSections(mApp *app.App, bindingSections []*bindingSection) string {
-	content := fmt.Sprintf("# Lazygit %s\n", mApp.Tr.SLocalize("Keybindings"))
+	content := fmt.Sprintf("# Lazygit %s\n", mApp.Tr.Keybindings)
 
 	for _, section := range bindingSections {
 		content += formatTitle(section.title)

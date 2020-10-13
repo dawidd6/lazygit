@@ -49,6 +49,7 @@ Default path for the config file:
     autoFetch: true
     branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
     overrideGpg: false # prevents lazygit from spawning a separate process when using GPG
+    disableForcePushing: false
   update:
     method: prompt # can be: prompt | background | never
     days: 14 # how often an update is checked for
@@ -56,6 +57,7 @@ Default path for the config file:
   confirmOnQuit: false
   # determines whether hitting 'esc' will quit the application when there is nothing to cancel/close
   quitOnTopLevelReturn: true
+  disableStartupPopups: false
   keybinding:
     universal:
       quit: 'q'
@@ -163,6 +165,10 @@ Default path for the config file:
       toggleDragSelect-alt: 'V'
       toggleSelectHunk: 'a'
       pickBothHunks: 'b'
+    submodules:
+      init: 'i'
+      update: 'u'
+      bulkMenu: 'b'
 ```
 
 ## Platform Defaults
@@ -247,7 +253,7 @@ If you struggle to see the selected line I recomment using the reverse attribute
 
 ## Example Coloring
 
-![border example](/docs/resources/colored-border-example.png)
+![border example](../../assets/colored-border-example.png)
 
 ## Keybindings
 
@@ -317,3 +323,16 @@ Example:
         pattern: "^\\w+\\/(\\w+-\\w+)"
         replace: "[$1] "
 ```
+
+## Custom git log command
+
+You can override the `git log` command that's used to render the log of the selected branch like so:
+
+```
+git:
+  branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium --oneline {{branchName}} --"
+```
+
+Result:
+
+![](https://i.imgur.com/Nibq35B.png)

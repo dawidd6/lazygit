@@ -13,7 +13,7 @@ Rant time: You've heard it before, git is _powerful_, but what good is that powe
 
 If you're a mere mortal like me and you're tired of hearing how powerful git is when in your daily life it's a powerful pain in your ass, lazygit might be for you.
 
-![Gif](/docs/resources/staging.gif)
+![Gif](../assets/staging.gif)
 
 ## Table of contents
 
@@ -30,12 +30,14 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
   - [FreeBSD](#freebsd)
   - [Conda](#conda)
   - [Go](#go)
+  - [Manual](#manual)
 - [Usage](#usage)
   - [Keybindings](#keybindings)
   - [Changing directory on exit](#changing-directory-on-exit)
   - [Undo/Redo](#undoredo)
 - [Configuration](#configuration)
   - [Custom pagers](#configuration)
+  - [Custom commands](#configuration)
 - [Tutorials](#tutorials)
 - [Cool Features](#cool-features)
 - [Contributing](#contributing)
@@ -164,6 +166,17 @@ may need to add `~/go/bin` to your \$PATH (MacOS/Linux), or `%HOME%\go\bin`
 (Windows). Not to be mistaked for `C:\Go\bin` (which is for Go's own binaries,
 not apps like Lazygit).
 
+### Manual
+
+You'll need to [install Go](https://golang.org/doc/install)
+
+```
+git clone https://github.com/jesseduffield/lazygit.git
+cd lazygit
+go install
+```
+
+You can also use `go run main.go` to compile and run in one go (pun definitely intended)
 
 ## Usage
 
@@ -213,6 +226,12 @@ Check out the [configuration docs](docs/Config.md).
 
 See the [docs](docs/Custom_Pagers.md)
 
+### Custom Commands
+
+If lazygit is missing a feature, there's a good chance you can implement it yourself with a custom command!
+
+See the [docs](docs/Custom_Command_Keybindings.md)
+
 ## Tutorials
 
 - [Video Tutorial](https://youtu.be/VDXvbHZYeKY)
@@ -231,18 +250,21 @@ See the [docs](docs/Custom_Pagers.md)
 
 ### Resolving merge conflicts
 
-![Gif](/docs/resources/resolving-merge-conflicts.gif)
+![Gif](../assets/resolving-merge-conflicts.gif)
 
 ### Interactive Rebasing
 
-![Interactive Rebasing](/docs/resources/rebase.gif)
+![Interactive Rebasing](../assets/rebase.gif)
 
 ## Contributing
 
 We love your input! Please check out the [contributing guide](CONTRIBUTING.md).
 For contributor discussion about things not better discussed here in the repo, join the slack channel
 
-[![Slack](/docs/resources/slack_rgb.png)](https://join.slack.com/t/lazygit/shared_invite/zt-5bo2clzo-hB8ZTVN5dWUCqj5QFiQVLA)
+[![Slack](../assets/slack_rgb.png)](https://join.slack.com/t/lazygit/shared_invite/zt-5bo2clzo-hB8ZTVN5dWUCqj5QFiQVLA)
+
+### Debugging Locally
+Run `lazygit --debug` in one terminal tab and `lazygit --logs` in another to view the program and its log output side by side
 
 ## Donate
 
