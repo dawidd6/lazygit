@@ -111,6 +111,8 @@ Default path for the config file:
       diffingMenu: 'W'
       diffingMenu-alt: '<c-e>' # deprecated
       copyToClipboard: '<c-o>'
+      submitEditorText: '<enter>'
+      appendNewline: '<tab>'
     status:
       checkForUpdate: 'u'
       recentRepos: '<enter>'
@@ -156,6 +158,7 @@ Default path for the config file:
       tagCommit: 'T'
       checkoutCommit: '<space>'
       resetCherryPick: '<c-R>'
+      copyCommitMessageToClipboard: '<c-y>'
     stash:
       popStash: 'g'
     commitFiles:

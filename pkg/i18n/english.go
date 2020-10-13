@@ -381,6 +381,7 @@ type TranslationSet struct {
 	LcOpenDiffingMenu                   string
 	LcShowingGitDiff                    string
 	LcCopyCommitShaToClipboard          string
+	LcCopyCommitMessageToClipboard      string
 	LcCopyBranchNameToClipboard         string
 	LcCopyFileNameToClipboard           string
 	LcCopyCommitFileNameToClipboard     string
@@ -427,6 +428,7 @@ type TranslationSet struct {
 	SubCommitsTitle                     string
 	SubmodulesTitle                     string
 	NavigationTitle                     string
+	PushingTagStatus                    string
 }
 
 const englishReleaseNotes = `## lazygit 0.23.2 Release Notes
@@ -878,6 +880,7 @@ func englishTranslationSet() TranslationSet {
 		LcOpenDiffingMenu:                   "open diff menu",
 		LcShowingGitDiff:                    "showing output for:",
 		LcCopyCommitShaToClipboard:          "copy commit SHA to clipboard",
+		LcCopyCommitMessageToClipboard:      "copy commit message to clipboard",
 		LcCopyBranchNameToClipboard:         "copy branch name to clipboard",
 		LcCopyFileNameToClipboard:           "copy the file name to the clipboard",
 		LcCopyCommitFileNameToClipboard:     "copy the committed file name to the clipboard",
@@ -924,5 +927,6 @@ func englishTranslationSet() TranslationSet {
 		SubCommitsTitle:                     "Sub-commits",
 		SubmodulesTitle:                     "Submodules",
 		NavigationTitle:                     "List Panel Navigation",
+		PushingTagStatus:                    "pushing tag",
 	}
 }
