@@ -1,3 +1,191 @@
+lazygit (0.23.2-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * try again
+  * fix bug where cancelling search in menu caused issue
+  * better way of knowing which commits are unpushed
+  * support branches with no upstream
+  * remove redundant test
+  * drop merge commits when interactive rebasing just like git CLI
+  * more efficient refreshing of rebase commits
+  * gracefully fail due to git version less than 2.0
+  * restore donate link
+  * fast UI update when moving commits in rebase mode
+
+  [ Francisco Miamoto ]
+  * add config for disabling force pushing
+  * implement config option for disabling force pushing
+  * use GetBool instead of casting
+
+  [ Jesse Duffield ]
+  * ensure that when a branch name is ambiguous we still show the correct colours
+  * fix test
+  * fix test
+
+  [ Lakshay Garg ]
+  * Fix numbering in English IntroPopupMessage
+  * Fix numbering in Dutch IntroPopupMessage
+
+  [ Jesse Duffield ]
+  * show loading state when amending top commit
+  * better flag description
+  * smarter checking of git version
+
+  [ Yuki Osaki ]
+  * Be able to copy file name
+  * Update pkg/i18n/english.go
+  * Change the descriptions to lowercase
+
+  [ Jesse Duffield ]
+  * Update README.md
+  * Update README.md
+  * add in-built logging support for a better dev experience
+  * more logging
+  * better documentation
+  * tidy go.sum
+  * use --no-ext-diff flag for git diff
+  * convert to string in a better way because I'm pretty sure alpine needs it
+  * refresh commit files view when needed
+  * fix panic
+  * more lenient handling of views not existing
+  * support custom keybindings
+  * better interface
+  * minor fixup
+  * support prompts in custom commands
+  * support menus in custom commands
+  * better template support for menus and prompts
+  * fallback to value if name not given
+  * rename prompt to input
+  * support custom command loading text
+  * better validation messages
+  * add custom command keybindings doc
+  * Update README.md
+  * Update Custom_Command_Keybindings.md
+  * Update Undoing.md
+  * Update Config.md
+  * point to assets branch
+  * remove resources folder now that we're using the assets branch
+  * Update README.md
+  * Update Custom_Command_Keybindings.md
+  * better handling of global custom keybindings
+  * bump gocui
+  * Update Custom_Command_Keybindings.md
+  * support setting description in custom command
+  * Update Config.md
+  * support bare repositories
+  * unset GIT_WORK_TREE and GIT_DIR when switching repos
+  * do not include bare repos in recent repos list
+  * move git dir env stuff into a centralised package
+  * missed a spot
+  * support opening lazygit in a symlinked submodule
+  * support submodules
+  * support discarding submodule changes
+  * support nuking all submodules
+  * allow entering and returning from submodule
+  * format code
+  * tell users we're going to reset submodules
+  * fix tests
+  * pull branch model out into models package
+  * move commits model into models package
+  * move tags
+  * move remotes and remote branches
+  * move file and submodule
+  * move stash panel
+  * move commit files
+  * move OS commands into their own package
+  * factor out code for loading models
+  * factor out code from git.go
+  * fix tests
+  * move models folder into commands folder
+  * fix windows build
+  * add mutex to views array
+
+  [ Mrityunjay Saxena ]
+  * Limitations Section sentence mixup corrected
+
+  [ Jesse Duffield ]
+  * Update README.md
+  * make it easier to add a tab to a view
+  * add submodules context
+  * add more submodule commands
+  * allow adding a submodule
+  * allow updating submodule url
+  * add mutexes for when looping through views
+  * manually update submodule url
+  * improved command for deleting a submodule
+  * allow submodule init and show submodule diff with a prefix
+  * allow updating submodule
+  * stop refreshing item when at end of list
+  * bulk submodule menu
+  * dont really need this
+  * use path not name
+  * fix test
+  * update keybindings
+  * fix windows CI
+  * dont close over loop variables ugh I hate this language feature
+
+  [ kobutomo ]
+  * Ignore "i" command if the filename is .gitignore
+  * Add error panel.
+
+  [ Jesse Duffield ]
+  * switch to fork of go-git
+  * bump go-git to fix invalid merge error
+  * Create Integration_Tests.md
+  * remove viper
+  * store popup version in state not config so that we never need to write to the user config
+  * have typed default config
+  * type i18n
+  * support recording sessions for testing purposes
+  * support integration testing
+  * this is so cool
+  * better interface
+  * support configurable config
+  * add another integration test
+  * kill process if nothing happens two seconds after final event
+  * heed gocui stopping
+  * add merge conflicts integration test
+  * another integration test
+  * paging keybindings for line by line panel
+  * another integration test
+  * fix loop logic
+  * fall back to slower speed if test fails
+  * fix CI
+
+  [ CI ]
+  * support running integration tests in parallel
+  * stop using snapshot just store the actual resultant repo
+  * configurable speeds
+  * stop using snapshots
+
+  [ Jesse Duffield ]
+  * more mutex safety with staging panel
+  * store everything you need to know about a test in its directory
+  * small changes
+  * add some safe goroutines
+  * do not put mutexes on state else we might unlock an unlocked mutex
+  * fix nil view keybinding panic
+  * fix another panic error
+  * fix mutex deadlock
+  * install lazygit at beginning of test suite
+  * fix go.mod and go.sum
+  * for some reason the commit files view was on top
+  * release notes in status panel
+  * fix submodule tab colour
+  * fix up intro text
+  * fix up intro text even more
+
+  [ band-a-prend ]
+  * Add SSH key passphrase prompt to pull/push from/to remote git repo
+
+  [ Jesse Duffield ]
+  * fix delta
+  * quote config file when editing
+  * return default config when dealing with read only filesystem rather than create new config file
+  * update in-app release notes
+
+ -- Dawid Dziurla <dawidd0811@gmail.com>  Tue, 13 Oct 2020 13:38:14 +0200
+
 lazygit (0.22.1-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
