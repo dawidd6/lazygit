@@ -30,6 +30,7 @@ If you're a mere mortal like me and you're tired of hearing how powerful git is 
   - [FreeBSD](#freebsd)
   - [Conda](#conda)
   - [Go](#go)
+  - [Chocolatey (Windows)](#chocolatey-windows)
   - [Manual](#manual)
 - [Usage](#usage)
   - [Keybindings](#keybindings)
@@ -52,7 +53,7 @@ Github Sponsors is matching all donations dollar-for-dollar for 12 months so if 
 
 ### Binary Releases
 
-For Windows, Mac OS or Linux, you can download a binary release [here](../../releases).
+For Windows, Mac OS(10.10+) or Linux, you can download a binary release [here](../../releases).
 
 ### Homebrew
 
@@ -165,6 +166,14 @@ If you get an error claiming that lazygit cannot be found or is not defined, you
 may need to add `~/go/bin` to your \$PATH (MacOS/Linux), or `%HOME%\go\bin`
 (Windows). Not to be mistaked for `C:\Go\bin` (which is for Go's own binaries,
 not apps like Lazygit).
+
+### Chocolatey (Windows)
+
+You can install `lazygit` using [Chocolatey](https://chocolatey.org/):
+
+```sh
+choco install lazygit
+```
 
 ### Manual
 

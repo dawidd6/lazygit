@@ -48,6 +48,7 @@ Default path for the config file:
     skipHookPrefix: WIP
     autoFetch: true
     branchLogCmd: "git log --graph --color=always --abbrev-commit --decorate --date=relative --pretty=medium {{branchName}} --"
+    allBranchesLogCmd: "git log --graph --all --color=always --abbrev-commit --decorate --date=relative  --pretty=medium"
     overrideGpg: false # prevents lazygit from spawning a separate process when using GPG
     disableForcePushing: false
   update:
@@ -58,6 +59,7 @@ Default path for the config file:
   # determines whether hitting 'esc' will quit the application when there is nothing to cancel/close
   quitOnTopLevelReturn: true
   disableStartupPopups: false
+  notARepository: 'prompt' # one of: 'prompt' | 'create' | 'skip'
   keybinding:
     universal:
       quit: 'q'
@@ -339,3 +341,24 @@ git:
 Result:
 
 ![](https://i.imgur.com/Nibq35B.png)
+
+## Launching not in a repository behaviour
+
+By default, when launching lazygit from a directory that is not a repository,
+you will be prompted to choose if you would like to initialize a repo. You can
+override this behaviour in the config with one of the following:
+
+```yaml
+# for default prompting behaviour
+notARepository: 'prompt'
+```
+
+```yaml
+# to skip and initialize a new repo
+notARepository: 'create'
+```
+
+```yaml
+# to skip without creating a new repo
+notARepository: 'skip'
+```

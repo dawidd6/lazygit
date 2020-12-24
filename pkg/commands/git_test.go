@@ -954,15 +954,23 @@ func TestGitCommandAmendHead(t *testing.T) {
 // TestGitCommandPush is a function.
 func TestGitCommandPush(t *testing.T) {
 	type scenario struct {
-		testName  string
-		command   func(string, ...string) *exec.Cmd
-		forcePush bool
-		test      func(error)
+		testName           string
+		getLocalGitConfig  func(string) (string, error)
+		getGlobalGitConfig func(string) (string, error)
+		command            func(string, ...string) *exec.Cmd
+		forcePush          bool
+		test               func(error)
 	}
 
 	scenarios := []scenario{
 		{
-			"Push with force disabled",
+			"Push with force disabled, follow-tags on",
+			func(string) (string, error) {
+				return "", nil
+			},
+			func(string) (string, error) {
+				return "", nil
+			},
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
 				assert.EqualValues(t, []string{"push", "--follow-tags"}, args)
@@ -975,7 +983,13 @@ func TestGitCommandPush(t *testing.T) {
 			},
 		},
 		{
-			"Push with force enabled",
+			"Push with force enabled, follow-tags on",
+			func(string) (string, error) {
+				return "", nil
+			},
+			func(string) (string, error) {
+				return "", nil
+			},
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
 				assert.EqualValues(t, []string{"push", "--follow-tags", "--force-with-lease"}, args)
@@ -988,7 +1002,51 @@ func TestGitCommandPush(t *testing.T) {
 			},
 		},
 		{
-			"Push with an error occurring",
+			"Push with force disabled, follow-tags off locally",
+			func(string) (string, error) {
+				return "false", nil
+			},
+			func(string) (string, error) {
+				return "", nil
+			},
+			func(cmd string, args ...string) *exec.Cmd {
+				assert.EqualValues(t, "git", cmd)
+				assert.EqualValues(t, []string{"push"}, args)
+
+				return exec.Command("echo")
+			},
+			false,
+			func(err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"Push with force enabled, follow-tags off globally",
+			func(string) (string, error) {
+				return "", nil
+			},
+			func(string) (string, error) {
+				return "false", nil
+			},
+			func(cmd string, args ...string) *exec.Cmd {
+				assert.EqualValues(t, "git", cmd)
+				assert.EqualValues(t, []string{"push", "--force-with-lease"}, args)
+
+				return exec.Command("echo")
+			},
+			true,
+			func(err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"Push with an error occurring, follow-tags on",
+			func(string) (string, error) {
+				return "", nil
+			},
+			func(string) (string, error) {
+				return "", nil
+			},
 			func(cmd string, args ...string) *exec.Cmd {
 				assert.EqualValues(t, "git", cmd)
 				assert.EqualValues(t, []string{"push", "--follow-tags"}, args)
@@ -1005,6 +1063,8 @@ func TestGitCommandPush(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.Command = s.command
+			gitCmd.getLocalGitConfig = s.getLocalGitConfig
+			gitCmd.getGlobalGitConfig = s.getGlobalGitConfig
 			err := gitCmd.Push("test", s.forcePush, "", "", func(passOrUname string) string {
 				return "\n"
 			})
@@ -1380,6 +1440,18 @@ func TestGitCommandGetBranchGraph(t *testing.T) {
 		return exec.Command("echo")
 	}
 	_, err := gitCmd.GetBranchGraph("test")
+	assert.NoError(t, err)
+}
+
+func TestGitCommandGetAllBranchGraph(t *testing.T) {
+	gitCmd := NewDummyGitCommand()
+	gitCmd.OSCommand.Command = func(cmd string, args ...string) *exec.Cmd {
+		assert.EqualValues(t, "git", cmd)
+		assert.EqualValues(t, []string{"log", "--graph", "--all", "--color=always", "--abbrev-commit", "--decorate", "--date=relative", "--pretty=medium"}, args)
+		return exec.Command("echo")
+	}
+	cmdStr := gitCmd.Config.GetUserConfig().Git.AllBranchesLogCmd
+	_, err := gitCmd.OSCommand.RunCommandWithOutput(cmdStr)
 	assert.NoError(t, err)
 }
 
@@ -2085,5 +2157,156 @@ func TestFindDotGitDir(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			s.test(findDotGitDir(s.stat, s.readFile))
 		})
+	}
+}
+
+// TestEditFile is a function.
+func TestEditFile(t *testing.T) {
+	type scenario struct {
+		filename           string
+		command            func(string, ...string) *exec.Cmd
+		getenv             func(string) string
+		getGlobalGitConfig func(string) (string, error)
+		test               func(*exec.Cmd, error)
+	}
+
+	scenarios := []scenario{
+		{
+			"test",
+			func(name string, arg ...string) *exec.Cmd {
+				return exec.Command("exit", "1")
+			},
+			func(env string) string {
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.EqualError(t, err, "No editor defined in $VISUAL, $EDITOR, or git config")
+			},
+		},
+		{
+			"test",
+			func(name string, arg ...string) *exec.Cmd {
+				if name == "which" {
+					return exec.Command("exit", "1")
+				}
+
+				assert.EqualValues(t, "nano", name)
+
+				return nil
+			},
+			func(env string) string {
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "nano", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"test",
+			func(name string, arg ...string) *exec.Cmd {
+				if name == "which" {
+					return exec.Command("exit", "1")
+				}
+
+				assert.EqualValues(t, "nano", name)
+
+				return nil
+			},
+			func(env string) string {
+				if env == "VISUAL" {
+					return "nano"
+				}
+
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"test",
+			func(name string, arg ...string) *exec.Cmd {
+				if name == "which" {
+					return exec.Command("exit", "1")
+				}
+
+				assert.EqualValues(t, "emacs", name)
+
+				return nil
+			},
+			func(env string) string {
+				if env == "EDITOR" {
+					return "emacs"
+				}
+
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"test",
+			func(name string, arg ...string) *exec.Cmd {
+				if name == "which" {
+					return exec.Command("echo")
+				}
+
+				assert.EqualValues(t, "vi", name)
+
+				return nil
+			},
+			func(env string) string {
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			"file/with space",
+			func(name string, args ...string) *exec.Cmd {
+				if name == "which" {
+					return exec.Command("echo")
+				}
+
+				assert.EqualValues(t, "vi", name)
+				assert.EqualValues(t, "file/with space", args[0])
+
+				return nil
+			},
+			func(env string) string {
+				return ""
+			},
+			func(cf string) (string, error) {
+				return "", nil
+			},
+			func(cmd *exec.Cmd, err error) {
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for _, s := range scenarios {
+		gitCmd := NewDummyGitCommand()
+		gitCmd.OSCommand.Command = s.command
+		gitCmd.OSCommand.Getenv = s.getenv
+		gitCmd.getGlobalGitConfig = s.getGlobalGitConfig
+		s.test(gitCmd.EditFile(s.filename))
 	}
 }
