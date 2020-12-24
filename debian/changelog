@@ -1,3 +1,15 @@
+lazygit (0.24.2-1) xenial; urgency=medium
+
+  [ Jeff Hertzler ]
+  * Update Custom_Command_Keybindings.md
+
+  [ Dawid Dziurla ]
+  * workflows: split CD into separate jobs
+  * gui: ReplaceAll -> Replace
+  * workflows: setup git before PPA repo updating
+
+ --  <runner@fv-az182-901.esh5c1qpksvutjwaglqib1eb4b.bx.internal.cloudapp.net>  Thu, 24 Dec 2020 09:37:08 +0000
+
 lazygit (0.24-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
