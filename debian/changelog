@@ -1,3 +1,75 @@
+lazygit (0.24-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * prevent crash when removing remote with no urls
+
+  [ Dawid Dziurla ]
+  * workflows: update apt cache before installing pkgs
+
+  [ Sean Stiglitz ]
+  * Add GolangCI action.
+
+  [ Dawid Dziurla ]
+  * workflows: clean up linting
+
+  [ Jesse Duffield ]
+  * fix lint errors
+
+  [ Jaime Gomes ]
+  * add minimum macos version 10.10 to the README
+
+  [ Farzad Majidfayyaz ]
+  * Add mapping to copy a pull request URL to the clipboard
+  * Change copy PR mapping to <c-y> and use gui.Tr for the message
+
+  [ Nils Andresen ]
+  * Added a reference to chocolatey in README
+
+  [ Jesse Duffield ]
+  * Update docs/README.md
+  * toast notifications
+  * notify user upon copying something to clipboard
+  * Update Custom_Command_Keybindings.md
+  * fix updater
+
+  [ Nathan Bell ]
+  * Allow --follow-tags to be disabled if push.followTags is configured to false
+  * added tests and fixed bug found in tests
+
+  [ Davyd McColl ]
+  * :sparkles: implement quick commit when no files staged, if configured to do so
+  * :bug: should only stage all if configured to do so _and_ there are no items staged
+  * :ok_hand: update as per PR commentary
+
+  [ Nick Flueckiger ]
+  * A small change that enables direct lazygit directory config
+  * Switch the directory check
+  * Implement suggestions
+
+  [ Jesse Duffield ]
+  * standardise how we read from the config
+
+  [ Kalvin Pearce ]
+  * Add config option for notInRepo behaviour.
+  * Add notARepository to config docs
+  * Fix formatting on notARepository checks
+  * Add notARepository description to config docs
+
+  [ Yuki Osaki ]
+  * Visualize the commits for all branches
+  * Add lc prefix
+
+  [ Jesse Duffield ]
+  * Start on supporting auto-suggestions when checking out a branch
+  * refactor prompt opts
+  * support labels for suggestions which are distinct from values
+  * soft code finding of suggestions
+  * refactor
+  * add integration test for branch checkout autocomplete
+  * v24 release notes
+
+ --  <runner@fv-az193-177.wrjnvqtt5vgufeilu1c2fh22ka.bx.internal.cloudapp.net>  Thu, 24 Dec 2020 02:58:09 +0000
+
 lazygit (0.23.6-1) xenial; urgency=medium
 
   * gui: fix go-1.10 compatibility
