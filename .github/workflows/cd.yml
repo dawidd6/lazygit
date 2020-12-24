@@ -6,8 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  cd:
-    runs-on: ubuntu-20.04
+  goreleaser:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -21,17 +21,25 @@ jobs:
         uses: goreleaser/goreleaser-action@v1
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_API_TOKEN}}
-      - name: Bump Homebrew
+  homebrew:
+    runs-on: macos-latest
+    steps:
+      - name: Bump Homebrew formula
         uses: dawidd6/action-homebrew-bump-formula@v3
         with:
           token: ${{secrets.GITHUB_API_TOKEN}}
           formula: lazygit
+  ppa:
+    runs-on: ubuntu-20.04
+    steps:
       - name: Checkout PPA repo
         uses: actions/checkout@v2
         with:
           repository: dawidd6/lazygit-debian
           token: ${{secrets.GITHUB_API_TOKEN}}
           fetch-depth: 0
+      - name: Setup git
+        uses: dawidd6/action-git-user-config@v1
       - name: Update PPA repo
         run: |
           version="$(echo "$GITHUB_REF" | sed 's@refs/tags/v@@')"
