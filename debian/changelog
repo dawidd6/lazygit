@@ -1,3 +1,10 @@
+lazygit (0.25.1-1) xenial; urgency=medium
+
+  [ Dawid Dziurla ]
+  * gui: ReplaceAll -> Replace
+
+ --  <runner@fv-az272-993.15vd0tfrzozuhnqz02hsyrsgzd.xx.internal.cloudapp.net>  Tue, 23 Feb 2021 23:16:45 +0000
+
 lazygit (0.25-1) xenial; urgency=medium
 
   [ unknown ]
