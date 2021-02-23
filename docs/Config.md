@@ -51,6 +51,9 @@ Default path for the config file:
     allBranchesLogCmd: "git log --graph --all --color=always --abbrev-commit --decorate --date=relative  --pretty=medium"
     overrideGpg: false # prevents lazygit from spawning a separate process when using GPG
     disableForcePushing: false
+  refresher:
+    refreshInterval: 10 # file/submodule refresh interval in seconds
+    fetchInterval: 60 # re-fetch interval in seconds
   update:
     method: prompt # can be: prompt | background | never
     days: 14 # how often an update is checked for
@@ -325,7 +328,7 @@ Example:
   git:
     commitPrefixes:
       my_project: # This is repository folder name
-        pattern: "^\\w+\\/(\\w+-\\w+)"
+        pattern: "^\\w+\\/(\\w+-\\w+).*"
         replace: "[$1] "
 ```
 
