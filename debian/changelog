@@ -1,3 +1,36 @@
+lazygit (0.25-1) xenial; urgency=medium
+
+  [ unknown ]
+  * fix type: executable not found error when there is a merge conflict on windows
+
+  [ caquillo07 ]
+  * added support for using spaces on branch names when creating new ones.
+
+  [ Nick Flueckiger ]
+  * Adding setup and config
+
+  [ Jesse Duffield ]
+  * add secureexec file for getting around windows checking for a binary first in the current dir
+  * remove go-gitconfig package
+  * fix lint error
+  * support wide characters in the editor
+  * update cheatsheet
+
+  [ Rui Pires ]
+  * Added initialContent on branch rename
+  * Fixed whitespace format issue
+
+  [ 1jz ]
+  * add colors to differentiate action and menu commands
+
+  [ Matthias Küch ]
+  * Fix pattern in commitPrefix example
+
+  [ Daniel Bast ]
+  * Switch to Go 1.16 to support macOS arm64
+
+ --  <runner@fv-az190-649.w0ke5f4yen4edkqp3ddmza5ayg.bx.internal.cloudapp.net>  Tue, 23 Feb 2021 12:30:07 +0000
+
 lazygit (0.24.2-1) xenial; urgency=medium
 
   [ Jeff Hertzler ]
