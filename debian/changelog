@@ -1,3 +1,30 @@
+lazygit (0.26-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * reload config whenever returning to gui
+
+  [ István Donkó ]
+  * Fix the linux config path (related: #913, #1059)
+
+  [ Ryooooooga ]
+  * fix command escaping
+  * Support multibyte characters in `Files` pane
+  * Fix staging/unstaging files containing `"` in paths
+  * Fix staging/unstaging filenames that starts with `-` or `--`
+  * Support multibyte characters in  pane
+  * Fix tests
+
+  [ Jesse Duffield ]
+  * remove redundant addition
+
+  [ Ryooooooga ]
+  * Fix edit remote name message
+
+  [ Jesse Duffield ]
+  * update release notes
+
+ --  <runner@fv-az173-32.43dkkewpjgeehmtobcrgmpx13g.gx.internal.cloudapp.net>  Sat, 13 Mar 2021 00:48:20 +0000
+
 lazygit (0.25.1-1) xenial; urgency=medium
 
   [ Dawid Dziurla ]
