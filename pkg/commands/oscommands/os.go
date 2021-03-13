@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -24,14 +23,13 @@ import (
 
 // Platform stores the os state
 type Platform struct {
-	OS                   string
-	CatCmd               string
-	Shell                string
-	ShellArg             string
-	EscapedQuote         string
-	OpenCommand          string
-	OpenLinkCommand      string
-	FallbackEscapedQuote string
+	OS              string
+	CatCmd          string
+	Shell           string
+	ShellArg        string
+	EscapedQuote    string
+	OpenCommand     string
+	OpenLinkCommand string
 }
 
 // OSCommand holds all the os commands
@@ -129,7 +127,7 @@ func (c *OSCommand) ShellCommandFromString(commandStr string) *exec.Cmd {
 	if c.Platform.OS == "windows" {
 		quotedCommand = commandStr
 	} else {
-		quotedCommand = strconv.Quote(commandStr)
+		quotedCommand = c.Quote(commandStr)
 	}
 
 	shellCommand := fmt.Sprintf("%s %s %s", c.Platform.Shell, c.Platform.ShellArg, quotedCommand)
@@ -245,18 +243,17 @@ func (c *OSCommand) PrepareSubProcess(cmdName string, commandArgs ...string) *ex
 
 // Quote wraps a message in platform-specific quotation marks
 func (c *OSCommand) Quote(message string) string {
-	message = strings.Replace(message, "`", "\\`", -1)
-	escapedQuote := c.Platform.EscapedQuote
-	if strings.Contains(message, c.Platform.EscapedQuote) {
-		escapedQuote = c.Platform.FallbackEscapedQuote
+	if c.Platform.OS == "windows" {
+		message = strings.Replace(message, `"`, `"'"'"`, -1)
+		message = strings.Replace(message, `\"`, `\\"`, -1)
+	} else {
+		message = strings.Replace(message, `\`, `\\`, -1)
+		message = strings.Replace(message, `"`, `\"`, -1)
+		message = strings.Replace(message, "`", "\\`", -1)
+		message = strings.Replace(message, "$", "\\$", -1)
 	}
+	escapedQuote := c.Platform.EscapedQuote
 	return escapedQuote + message + escapedQuote
-}
-
-// Unquote removes wrapping quotations marks if they are present
-// this is needed for removing quotes from staged filenames with spaces
-func (c *OSCommand) Unquote(message string) string {
-	return strings.Replace(message, `"`, "", -1)
 }
 
 // AppendLineToFile adds a new line in file

@@ -22,7 +22,7 @@ func (c *GitCommand) CatFile(fileName string) (string, error) {
 func (c *GitCommand) StageFile(fileName string) error {
 	// renamed files look like "file1 -> file2"
 	fileNames := strings.Split(fileName, " -> ")
-	return c.OSCommand.RunCommand("git add %s", c.OSCommand.Quote(fileNames[len(fileNames)-1]))
+	return c.OSCommand.RunCommand("git add -- %s", c.OSCommand.Quote(fileNames[len(fileNames)-1]))
 }
 
 // StageAll stages all files
@@ -37,9 +37,9 @@ func (c *GitCommand) UnstageAll() error {
 
 // UnStageFile unstages a file
 func (c *GitCommand) UnStageFile(fileName string, tracked bool) error {
-	command := "git rm --cached --force %s"
+	command := "git rm --cached --force -- %s"
 	if tracked {
-		command = "git reset HEAD %s"
+		command = "git reset HEAD -- %s"
 	}
 
 	// renamed files look like "file1 -> file2"
@@ -149,7 +149,7 @@ func (c *GitCommand) WorktreeFileDiffCmdStr(file *models.File, plain bool, cache
 		cachedArg = "--cached"
 	}
 	if !file.Tracked && !file.HasStagedChanges && !cached {
-		trackedArg = "--no-index /dev/null"
+		trackedArg = "--no-index -- /dev/null"
 	}
 	if plain {
 		colorArg = "never"

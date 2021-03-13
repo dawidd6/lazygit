@@ -37,7 +37,7 @@ func (c *GitCommand) GetStatusFiles(opts GetStatusFileOptions) []*models.File {
 		change := statusString[0:2]
 		stagedChange := change[0:1]
 		unstagedChange := statusString[1:2]
-		filename := c.OSCommand.Unquote(statusString[3:])
+		filename := statusString[3:]
 		untracked := utils.IncludesString([]string{"??", "A ", "AM"}, change)
 		hasNoStagedChanges := utils.IncludesString([]string{" ", "U", "?"}, stagedChange)
 		hasMergeConflicts := utils.IncludesString([]string{"DD", "AA", "UU", "AU", "UA", "UD", "DU"}, change)
@@ -72,7 +72,13 @@ func (c *GitCommand) GitStatus(opts GitStatusOptions) (string, error) {
 		noRenamesFlag = "--no-renames"
 	}
 
-	return c.OSCommand.RunCommandWithOutput("git status %s --porcelain %s", opts.UntrackedFilesArg, noRenamesFlag)
+	statusLines, err := c.OSCommand.RunCommandWithOutput("git status %s --porcelain -z %s", opts.UntrackedFilesArg, noRenamesFlag)
+	if err != nil {
+		return "", err
+	}
+
+	statusLines = strings.Replace(statusLines, "\x00", "\n", -1)
+	return statusLines, nil
 }
 
 // MergeStatusFiles merge status files
