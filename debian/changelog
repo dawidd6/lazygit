@@ -1,3 +1,10 @@
+lazygit (0.26.1-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * fix renamed files looking wrong
+
+ --  <runner@fv-az132-894.s2ysvy03l0qetogizl3ovzyhye.bx.internal.cloudapp.net>  Sun, 14 Mar 2021 02:26:20 +0000
+
 lazygit (0.26-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
