@@ -3,6 +3,7 @@ package gui
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime"
 	"sync"
@@ -10,8 +11,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/go-errors/errors"
 
 	"github.com/fatih/color"
 	"github.com/golang-collections/collections/stack"
@@ -21,19 +20,26 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
 	"github.com/jesseduffield/lazygit/pkg/commands/patch"
 	"github.com/jesseduffield/lazygit/pkg/config"
+	"github.com/jesseduffield/lazygit/pkg/gui/filetree"
+	"github.com/jesseduffield/lazygit/pkg/gui/modes/filtering"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
 	"github.com/jesseduffield/lazygit/pkg/tasks"
 	"github.com/jesseduffield/lazygit/pkg/theme"
 	"github.com/jesseduffield/lazygit/pkg/updates"
 	"github.com/jesseduffield/lazygit/pkg/utils"
-	"github.com/jesseduffield/termbox-go"
 	"github.com/mattn/go-runewidth"
 	"github.com/sirupsen/logrus"
 )
 
+// screen sizing determines how much space your selected window takes up (window
+// as in panel, not your terminal's window). Sometimes you want a bit more space
+// to see the contents of a panel, and this keeps track of how much maximisation
+// you've set
+type WindowMaximisation int
+
 const (
-	SCREEN_NORMAL int = iota
+	SCREEN_NORMAL WindowMaximisation = iota
 	SCREEN_HALF
 	SCREEN_FULL
 )
@@ -43,56 +49,35 @@ const StartupPopupVersion = 3
 // OverlappingEdges determines if panel edges overlap
 var OverlappingEdges = false
 
-// SentinelErrors are the errors that have special meaning and need to be checked
-// by calling functions. The less of these, the better
-type SentinelErrors struct {
-	ErrSubProcess error
-	ErrNoFiles    error
-	ErrSwitchRepo error
-	ErrRestart    error
+type ContextManager struct {
+	ContextStack []Context
+	sync.RWMutex
 }
 
-const UNKNOWN_VIEW_ERROR_MSG = "unknown view"
-
-// GenerateSentinelErrors makes the sentinel errors for the gui. We're defining it here
-// because we can't do package-scoped errors with localization, and also because
-// it seems like package-scoped variables are bad in general
-// https://dave.cheney.net/2017/06/11/go-without-package-scoped-variables
-// In the future it would be good to implement some of the recommendations of
-// that article. For now, if we don't need an error to be a sentinel, we will just
-// define it inline. This has implications for error messages that pop up everywhere
-// in that we'll be duplicating the default values. We may need to look at
-// having a default localisation bundle defined, and just using keys-only when
-// localising things in the code.
-func (gui *Gui) GenerateSentinelErrors() {
-	gui.Errors = SentinelErrors{
-		ErrSubProcess: errors.New(gui.Tr.RunningSubprocess),
-		ErrNoFiles:    errors.New(gui.Tr.NoChangedFiles),
-		ErrSwitchRepo: errors.New("switching repo"),
-		ErrRestart:    errors.New("restarting"),
+func NewContextManager(initialContext Context) ContextManager {
+	return ContextManager{
+		ContextStack: []Context{initialContext},
+		RWMutex:      sync.RWMutex{},
 	}
 }
 
-func (gui *Gui) sentinelErrorsArr() []error {
-	return []error{
-		gui.Errors.ErrSubProcess,
-		gui.Errors.ErrNoFiles,
-		gui.Errors.ErrSwitchRepo,
-		gui.Errors.ErrRestart,
-	}
-}
+type Repo string
 
 // Gui wraps the gocui Gui object which handles rendering and events
 type Gui struct {
-	g                    *gocui.Gui
-	Log                  *logrus.Entry
-	GitCommand           *commands.GitCommand
-	OSCommand            *oscommands.OSCommand
-	SubProcess           *exec.Cmd
-	State                *guiState
+	g          *gocui.Gui
+	Log        *logrus.Entry
+	GitCommand *commands.GitCommand
+	OSCommand  *oscommands.OSCommand
+
+	// this is the state of the GUI for the current repo
+	State *guiState
+
+	// this is a mapping of repos to gui states, so that we can restore the original
+	// gui state when returning from a subrepo
+	RepoStateMap         map[Repo]*guiState
 	Config               config.AppConfigurer
 	Tr                   *i18n.TranslationSet
-	Errors               SentinelErrors
 	Updater              *updates.Updater
 	statusManager        *statusManager
 	credentials          credentials
@@ -103,25 +88,22 @@ type Gui struct {
 
 	// when lazygit is opened outside a git directory we want to open to the most
 	// recent repo with the recent repos popup showing
-	showRecentRepos   bool
-	Contexts          ContextTree
-	ViewTabContextMap map[string][]tabContext
-
-	// this array either includes the events that we're recording in this session
-	// or the events we've recorded in a prior session
-	RecordedEvents []RecordedEvent
-	StartTime      time.Time
+	showRecentRepos bool
 
 	Mutexes guiStateMutexes
 
 	// findSuggestions will take a string that the user has typed into a prompt
 	// and return a slice of suggestions which match that string.
 	findSuggestions func(string) []*types.Suggestion
-}
 
-type RecordedEvent struct {
-	Timestamp int64
-	Event     *termbox.Event
+	// when you enter into a submodule we'll append the superproject's path to this array
+	// so that you can return to the superproject
+	RepoPathStack []string
+
+	// this tells us whether our views have been initially set up
+	ViewsSetup bool
+
+	Views Views
 }
 
 type listPanelState struct {
@@ -136,11 +118,6 @@ func (h *listPanelState) GetSelectedLineIdx() int {
 	return h.SelectedLineIdx
 }
 
-type IListPanelState interface {
-	SetSelectedLineIdx(int)
-	GetSelectedLineIdx() int
-}
-
 // for now the staging panel state, unlike the other panel states, is going to be
 // non-mutative, so that we don't accidentally end up
 // with mismatches of data. We might change this in the future
@@ -150,15 +127,16 @@ type lBlPanelState struct {
 	LastLineIdx      int
 	Diff             string
 	PatchParser      *patch.PatchParser
-	SelectMode       int  // one of LINE, HUNK, or RANGE
+	SelectMode       SelectMode
 	SecondaryFocused bool // this is for if we show the left or right panel
 }
 
 type mergingPanelState struct {
-	ConflictIndex int
-	ConflictTop   bool
-	Conflicts     []commands.Conflict
-	EditHistory   *stack.Stack
+	ConflictIndex  int
+	ConflictTop    bool
+	Conflicts      []commands.Conflict
+	ConflictsMutex sync.Mutex
+	EditHistory    *stack.Stack
 
 	// UserScrolling tells us if the user has started scrolling through the file themselves
 	// in which case we won't auto-scroll to a conflict.
@@ -247,6 +225,28 @@ type panelStates struct {
 	Suggestions    *suggestionsPanelState
 }
 
+type Views struct {
+	Status        *gocui.View
+	Files         *gocui.View
+	Branches      *gocui.View
+	Commits       *gocui.View
+	Stash         *gocui.View
+	Main          *gocui.View
+	Secondary     *gocui.View
+	Options       *gocui.View
+	Confirmation  *gocui.View
+	Menu          *gocui.View
+	Credentials   *gocui.View
+	CommitMessage *gocui.View
+	CommitFiles   *gocui.View
+	Information   *gocui.View
+	AppStatus     *gocui.View
+	Search        *gocui.View
+	SearchPrefix  *gocui.View
+	Limit         *gocui.View
+	Suggestions   *gocui.View
+}
+
 type searchingState struct {
 	view         *gocui.View
 	isSearching  bool
@@ -254,8 +254,10 @@ type searchingState struct {
 }
 
 // startup stages so we don't need to load everything at once
+type StartupStage int
+
 const (
-	INITIAL = iota
+	INITIAL StartupStage = iota
 	COMPLETE
 )
 
@@ -269,19 +271,11 @@ func (m *Diffing) Active() bool {
 	return m.Ref != ""
 }
 
-type Filtering struct {
-	Path string // the filename that gets passed to git log
-}
-
-func (m *Filtering) Active() bool {
-	return m.Path != ""
-}
-
 type CherryPicking struct {
 	CherryPickedCommits []*models.Commit
 
 	// we only allow cherry picking from one context at a time, so you can't copy a commit from the local commits context and then also copy a commit in the reflog context
-	ContextKey string
+	ContextKey ContextKey
 }
 
 func (m *CherryPicking) Active() bool {
@@ -289,7 +283,7 @@ func (m *CherryPicking) Active() bool {
 }
 
 type Modes struct {
-	Filtering     Filtering
+	Filtering     filtering.Filtering
 	CherryPicking CherryPicking
 	Diffing       Diffing
 }
@@ -303,12 +297,14 @@ type guiStateMutexes struct {
 }
 
 type guiState struct {
-	Files        []*models.File
-	Submodules   []*models.SubmoduleConfig
-	Branches     []*models.Branch
-	Commits      []*models.Commit
-	StashEntries []*models.StashEntry
-	CommitFiles  []*models.CommitFile
+	// the file panels (files and commit files) can render as a tree, so we have
+	// managers for them which handle rendering a flat list of files in tree form
+	FileManager       *filetree.FileManager
+	CommitFileManager *filetree.CommitFileManager
+	Submodules        []*models.SubmoduleConfig
+	Branches          []*models.Branch
+	Commits           []*models.Commit
+	StashEntries      []*models.StashEntry
 	// Suggestions will sometimes appear when typing into a prompt
 	Suggestions []*types.Suggestion
 	// FilteredReflogCommits are the ones that appear in the reflog panel.
@@ -325,60 +321,75 @@ type guiState struct {
 	MenuItems         []*menuItem
 	Updating          bool
 	Panels            *panelStates
-	MainContext       string // used to keep the main and secondary views' contexts in sync
 	SplitMainPanel    bool
+	MainContext       ContextKey // used to keep the main and secondary views' contexts in sync
 	RetainOriginalDir bool
 	IsRefreshingFiles bool
 	Searching         searchingState
-	ScreenMode        int
+	ScreenMode        WindowMaximisation
 	SideView          *gocui.View
 	Ptmx              *os.File
 	PrevMainWidth     int
 	PrevMainHeight    int
 	OldInformation    string
-	StartupStage      int // one of INITIAL and COMPLETE. Allows us to not load everything at once
+	StartupStage      StartupStage // Allows us to not load everything at once
 
 	Modes Modes
 
-	ContextStack   []Context
-	ViewContextMap map[string]Context
+	ContextManager    ContextManager
+	Contexts          ContextTree
+	ViewContextMap    map[string]Context
+	ViewTabContextMap map[string][]tabContext
 
 	// WindowViewNameMap is a mapping of windows to the current view of that window.
 	// Some views move between windows for example the commitFiles view and when cycling through
 	// side windows we need to know which view to give focus to for a given window
 	WindowViewNameMap map[string]string
 
-	// when you enter into a submodule we'll append the superproject's path to this array
-	// so that you can return to the superproject
-	RepoPathStack []string
+	// tells us whether we've set up our views for the current repo. We'll need to
+	// do this whenever we switch back and forth between repos to get the views
+	// back in sync with the repo state
+	ViewsSetup bool
 }
 
-func (gui *Gui) resetState() {
-	// we carry over the filter path and diff state
-	prevFiltering := Filtering{
-		Path: "",
-	}
-	prevDiff := Diffing{}
-	prevCherryPicking := CherryPicking{
-		CherryPickedCommits: make([]*models.Commit, 0),
-		ContextKey:          "",
-	}
-	prevRepoPathStack := []string{}
-	if gui.State != nil {
-		prevFiltering = gui.State.Modes.Filtering
-		prevDiff = gui.State.Modes.Diffing
-		prevCherryPicking = gui.State.Modes.CherryPicking
-		prevRepoPathStack = gui.State.RepoPathStack
+// reuseState determines if we pull the repo state from our repo state map or
+// just re-initialize it. For now we're only re-using state when we're going
+// in and out of submodules, for the sake of having the cursor back on the submodule
+// when we return.
+//
+// I tried out always reverting to the repo's original state but found that in fact
+// it gets a bit confusing to land back in the status panel when visiting a repo
+// you've already switched from. There's no doubt some easy way to make the UX
+// optimal for all cases but I'm too lazy to think about what that is right now
+func (gui *Gui) resetState(filterPath string, reuseState bool) {
+	currentDir, err := os.Getwd()
+
+	if reuseState {
+		if err == nil {
+			if state := gui.RepoStateMap[Repo(currentDir)]; state != nil {
+				gui.State = state
+				gui.State.ViewsSetup = false
+				return
+			}
+		} else {
+			gui.Log.Error(err)
+		}
 	}
 
-	modes := Modes{
-		Filtering:     prevFiltering,
-		CherryPicking: prevCherryPicking,
-		Diffing:       prevDiff,
+	showTree := gui.Config.GetUserConfig().Gui.ShowFileTree
+
+	contexts := gui.contextTree()
+
+	screenMode := SCREEN_NORMAL
+	initialContext := contexts.Files
+	if filterPath != "" {
+		screenMode = SCREEN_HALF
+		initialContext = contexts.BranchCommits
 	}
 
 	gui.State = &guiState{
-		Files:                 make([]*models.File, 0),
+		FileManager:           filetree.NewFileManager(make([]*models.File, 0), gui.Log, showTree),
+		CommitFileManager:     filetree.NewCommitFileManager(make([]*models.CommitFile, 0), gui.Log, showTree),
 		Commits:               make([]*models.Commit, 0),
 		FilteredReflogCommits: make([]*models.Commit, 0),
 		ReflogCommits:         make([]*models.Commit, 0),
@@ -399,18 +410,32 @@ func (gui *Gui) resetState() {
 			Menu:           &menuPanelState{listPanelState: listPanelState{SelectedLineIdx: 0}, OnPress: nil},
 			Suggestions:    &suggestionsPanelState{listPanelState: listPanelState{SelectedLineIdx: 0}},
 			Merging: &mergingPanelState{
-				ConflictIndex: 0,
-				ConflictTop:   true,
-				Conflicts:     []commands.Conflict{},
-				EditHistory:   stack.New(),
+				ConflictIndex:  0,
+				ConflictTop:    true,
+				Conflicts:      []commands.Conflict{},
+				EditHistory:    stack.New(),
+				ConflictsMutex: sync.Mutex{},
 			},
 		},
-		SideView:       nil,
-		Ptmx:           nil,
-		Modes:          modes,
-		ViewContextMap: gui.initialViewContextMap(),
-		RepoPathStack:  prevRepoPathStack,
+		SideView: nil,
+		Ptmx:     nil,
+		Modes: Modes{
+			Filtering: filtering.NewFiltering(filterPath),
+			CherryPicking: CherryPicking{
+				CherryPickedCommits: make([]*models.Commit, 0),
+				ContextKey:          "",
+			},
+			Diffing: Diffing{},
+		},
+		ViewContextMap:    contexts.initialViewContextMap(),
+		ViewTabContextMap: contexts.initialViewTabContextMap(),
+		ScreenMode:        screenMode,
+		// TODO: put contexts in the context manager
+		ContextManager: NewContextManager(initialContext),
+		Contexts:       contexts,
 	}
+
+	gui.RepoStateMap[Repo(currentDir)] = gui.State
 }
 
 // for now the split view will always be on
@@ -426,41 +451,49 @@ func NewGui(log *logrus.Entry, gitCommand *commands.GitCommand, oSCommand *oscom
 		statusManager:        &statusManager{},
 		viewBufferManagerMap: map[string]*tasks.ViewBufferManager{},
 		showRecentRepos:      showRecentRepos,
-		RecordedEvents:       []RecordedEvent{},
+		RepoPathStack:        []string{},
+		RepoStateMap:         map[Repo]*guiState{},
 	}
 
-	gui.resetState()
-	gui.State.Modes.Filtering.Path = filterPath
-	gui.Contexts = gui.contextTree()
-	gui.ViewTabContextMap = gui.viewTabContextMap()
+	gui.resetState(filterPath, false)
 
 	gui.watchFilesForChanges()
-
-	gui.GenerateSentinelErrors()
 
 	return gui, nil
 }
 
 // Run setup the gui with keybindings and start the mainloop
 func (gui *Gui) Run() error {
-	gui.resetState()
-
 	recordEvents := recordingEvents()
+	playMode := gocui.NORMAL
+	if recordEvents {
+		playMode = gocui.RECORDING
+	} else if replaying() {
+		playMode = gocui.REPLAYING
+	}
 
-	g, err := gocui.NewGui(gocui.Output256, OverlappingEdges, recordEvents)
+	g, err := gocui.NewGui(gocui.OutputTrue, OverlappingEdges, playMode, headless())
 	if err != nil {
 		return err
 	}
+	gui.g = g // TODO: always use gui.g rather than passing g around everywhere
 	defer g.Close()
 
-	if recordEvents {
-		go utils.Safe(gui.recordEvents)
-	}
+	if replaying() {
+		g.RecordingConfig = gocui.RecordingConfig{
+			Speed:  getRecordingSpeed(),
+			Leeway: 100,
+		}
 
-	if gui.State.Modes.Filtering.Active() {
-		gui.State.ScreenMode = SCREEN_HALF
-	} else {
-		gui.State.ScreenMode = SCREEN_NORMAL
+		g.Recording, err = gui.loadRecording()
+		if err != nil {
+			return err
+		}
+
+		go utils.Safe(func() {
+			time.Sleep(time.Second * 40)
+			log.Fatal("40 seconds is up, lazygit recording took too long to complete")
+		})
 	}
 
 	g.OnSearchEscape = gui.onSearchEscape
@@ -477,8 +510,6 @@ func (gui *Gui) Run() error {
 	if userConfig.Gui.MouseEvents {
 		g.Mouse = true
 	}
-
-	gui.g = g // TODO: always use gui.g rather than passing g around everywhere
 
 	if err := gui.setColorScheme(); err != nil {
 		return err
@@ -508,20 +539,14 @@ func (gui *Gui) Run() error {
 	return err
 }
 
-// RunWithSubprocesses loops, instantiating a new gocui.Gui with each iteration
-// if the error returned from a run is a ErrSubProcess, it runs the subprocess
-// otherwise it handles the error, possibly by quitting the application
-func (gui *Gui) RunWithSubprocesses() error {
-	gui.StartTime = time.Now()
-	go utils.Safe(gui.replayRecordedEvents)
-
-	for {
-		gui.stopChan = make(chan struct{})
+// RunAndHandleError
+func (gui *Gui) RunAndHandleError() error {
+	gui.stopChan = make(chan struct{})
+	return utils.SafeWithError(func() error {
 		if err := gui.Run(); err != nil {
 			for _, manager := range gui.viewBufferManagerMap {
 				manager.Close()
 			}
-			gui.viewBufferManagerMap = map[string]*tasks.ViewBufferManager{}
 
 			if !gui.fileWatcher.Disabled {
 				gui.fileWatcher.Watcher.Close()
@@ -537,42 +562,63 @@ func (gui *Gui) RunWithSubprocesses() error {
 					}
 				}
 
-				if err := gui.saveRecordedEvents(); err != nil {
+				if err := gui.saveRecording(gui.g.Recording); err != nil {
 					return err
 				}
 
 				return nil
-			case gui.Errors.ErrSwitchRepo, gui.Errors.ErrRestart:
-				continue
-			case gui.Errors.ErrSubProcess:
 
-				if err := gui.runCommand(); err != nil {
-					return err
-				}
 			default:
 				return err
 			}
 		}
-	}
+
+		return nil
+	})
 }
 
-func (gui *Gui) runCommand() error {
-	gui.SubProcess.Stdout = os.Stdout
-	gui.SubProcess.Stderr = os.Stdout
-	gui.SubProcess.Stdin = os.Stdin
+func (gui *Gui) runSubprocessWithSuspense(subprocess *exec.Cmd) error {
+	if replaying() {
+		// we do not yet support running subprocesses within integration tests. So if
+		// we're replaying an integration test and we're inside this method, something
+		// has gone wrong, so we should fail
 
-	fmt.Fprintf(os.Stdout, "\n%s\n\n", utils.ColoredString("+ "+strings.Join(gui.SubProcess.Args, " "), color.FgBlue))
+		log.Fatal("opening subprocesses not yet supported in integration tests. Chances are that this test is running too fast and a subprocess is accidentally opened")
+	}
 
-	if err := gui.SubProcess.Run(); err != nil {
+	if err := gocui.Screen.Suspend(); err != nil {
+		return gui.surfaceError(err)
+	}
+
+	cmdErr := gui.runSubprocess(subprocess)
+
+	if err := gocui.Screen.Resume(); err != nil {
+		return gui.surfaceError(err)
+	}
+
+	if err := gui.refreshSidePanels(refreshOptions{mode: ASYNC}); err != nil {
+		return err
+	}
+
+	return gui.surfaceError(cmdErr)
+}
+
+func (gui *Gui) runSubprocess(subprocess *exec.Cmd) error {
+	subprocess.Stdout = os.Stdout
+	subprocess.Stderr = os.Stdout
+	subprocess.Stdin = os.Stdin
+
+	fmt.Fprintf(os.Stdout, "\n%s\n\n", utils.ColoredString("+ "+strings.Join(subprocess.Args, " "), color.FgBlue))
+
+	if err := subprocess.Run(); err != nil {
 		// not handling the error explicitly because usually we're going to see it
 		// in the output anyway
 		gui.Log.Error(err)
 	}
 
-	gui.SubProcess.Stdout = ioutil.Discard
-	gui.SubProcess.Stderr = ioutil.Discard
-	gui.SubProcess.Stdin = nil
-	gui.SubProcess = nil
+	subprocess.Stdout = ioutil.Discard
+	subprocess.Stderr = ioutil.Discard
+	subprocess.Stdin = nil
 
 	fmt.Fprintf(os.Stdout, "\n%s", utils.ColoredString(gui.Tr.PressEnterToReturn, color.FgGreen))
 	fmt.Scanln() // wait for enter press
@@ -581,11 +627,9 @@ func (gui *Gui) runCommand() error {
 }
 
 func (gui *Gui) loadNewRepo() error {
-	gui.Updater.CheckForNewUpdate(gui.onBackgroundUpdateCheckFinish, false)
 	if err := gui.updateRecentRepoList(); err != nil {
 		return err
 	}
-	gui.waitForIntro.Done()
 
 	if err := gui.refreshSidePanels(refreshOptions{mode: ASYNC}); err != nil {
 		return err
@@ -671,6 +715,8 @@ func (gui *Gui) setColorScheme() error {
 
 	gui.g.FgColor = theme.InactiveBorderColor
 	gui.g.SelFgColor = theme.ActiveBorderColor
+	gui.g.FrameColor = theme.InactiveBorderColor
+	gui.g.SelFrameColor = theme.ActiveBorderColor
 
 	return nil
 }

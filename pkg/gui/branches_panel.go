@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
@@ -31,13 +30,13 @@ func (gui *Gui) handleBranchSelect() error {
 	var task updateTask
 	branch := gui.getSelectedBranch()
 	if branch == nil {
-		task = gui.createRenderStringTask(gui.Tr.NoBranchesThisRepo)
+		task = NewRenderStringTask(gui.Tr.NoBranchesThisRepo)
 	} else {
 		cmd := gui.OSCommand.ExecutableFromString(
 			gui.GitCommand.GetBranchGraphCmdStr(branch.Name),
 		)
 
-		task = gui.createRunPtyTask(cmd)
+		task = NewRunPtyTask(cmd)
 	}
 
 	return gui.refreshMainViews(refreshMainOpts{
@@ -70,7 +69,7 @@ func (gui *Gui) refreshBranches() {
 	}
 	gui.State.Branches = builder.Build()
 
-	if err := gui.postRefreshUpdate(gui.Contexts.Branches.Context); err != nil {
+	if err := gui.postRefreshUpdate(gui.State.Contexts.Branches); err != nil {
 		gui.Log.Error(err)
 	}
 
@@ -79,7 +78,7 @@ func (gui *Gui) refreshBranches() {
 
 // specific functions
 
-func (gui *Gui) handleBranchPress(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleBranchPress() error {
 	if gui.State.Panels.Branches.SelectedLineIdx == -1 {
 		return nil
 	}
@@ -90,7 +89,7 @@ func (gui *Gui) handleBranchPress(g *gocui.Gui, v *gocui.View) error {
 	return gui.handleCheckoutRef(branch.Name, handleCheckoutRefOptions{})
 }
 
-func (gui *Gui) handleCreatePullRequestPress(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreatePullRequestPress() error {
 	pullRequest := commands.NewPullRequest(gui.GitCommand)
 
 	branch := gui.getSelectedBranch()
@@ -101,7 +100,7 @@ func (gui *Gui) handleCreatePullRequestPress(g *gocui.Gui, v *gocui.View) error 
 	return nil
 }
 
-func (gui *Gui) handleCopyPullRequestURLPress(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCopyPullRequestURLPress() error {
 	pullRequest := commands.NewPullRequest(gui.GitCommand)
 
 	branch := gui.getSelectedBranch()
@@ -114,7 +113,7 @@ func (gui *Gui) handleCopyPullRequestURLPress(g *gocui.Gui, v *gocui.View) error
 	return nil
 }
 
-func (gui *Gui) handleGitFetch(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleGitFetch() error {
 	if err := gui.createLoaderPanel(gui.Tr.FetchWait); err != nil {
 		return err
 	}
@@ -126,7 +125,7 @@ func (gui *Gui) handleGitFetch(g *gocui.Gui, v *gocui.View) error {
 	return nil
 }
 
-func (gui *Gui) handleForceCheckout(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleForceCheckout() error {
 	branch := gui.getSelectedBranch()
 	message := gui.Tr.SureForceCheckout
 	title := gui.Tr.ForceCheckoutBranch
@@ -208,7 +207,7 @@ func (gui *Gui) handleCheckoutRef(ref string, options handleCheckoutRefOptions) 
 	})
 }
 
-func (gui *Gui) handleCheckoutByName(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCheckoutByName() error {
 	return gui.prompt(promptOpts{
 		title:               gui.Tr.BranchName + ":",
 		findSuggestionsFunc: gui.findBranchNameSuggestions,
@@ -251,7 +250,7 @@ func (gui *Gui) createNewBranchWithName(newBranchName string) error {
 	return gui.refreshSidePanels(refreshOptions{mode: ASYNC})
 }
 
-func (gui *Gui) handleDeleteBranch(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleDeleteBranch() error {
 	return gui.deleteBranch(false)
 }
 
@@ -293,7 +292,7 @@ func (gui *Gui) deleteNamedBranch(selectedBranch *models.Branch, force bool) err
 				}
 				return gui.createErrorPanel(errMessage)
 			}
-			return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{BRANCHES}})
+			return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{BRANCHES}})
 		},
 	})
 }
@@ -328,7 +327,7 @@ func (gui *Gui) mergeBranchIntoCheckedOutBranch(branchName string) error {
 	})
 }
 
-func (gui *Gui) handleMerge(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleMerge() error {
 	if ok, err := gui.validateNotInFilterMode(); err != nil || !ok {
 		return err
 	}
@@ -337,7 +336,7 @@ func (gui *Gui) handleMerge(g *gocui.Gui, v *gocui.View) error {
 	return gui.mergeBranchIntoCheckedOutBranch(selectedBranchName)
 }
 
-func (gui *Gui) handleRebaseOntoLocalBranch(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleRebaseOntoLocalBranch() error {
 	selectedBranchName := gui.getSelectedBranch().Name
 	return gui.handleRebaseOntoBranch(selectedBranchName)
 }
@@ -369,7 +368,7 @@ func (gui *Gui) handleRebaseOntoBranch(selectedBranchName string) error {
 	})
 }
 
-func (gui *Gui) handleFastForward(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleFastForward() error {
 	branch := gui.getSelectedBranch()
 	if branch == nil {
 		return nil
@@ -408,13 +407,13 @@ func (gui *Gui) handleFastForward(g *gocui.Gui, v *gocui.View) error {
 		} else {
 			err := gui.GitCommand.FastForward(branch.Name, remoteName, remoteBranchName, gui.promptUserForCredential)
 			gui.handleCredentialsPopup(err)
-			_ = gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{BRANCHES}})
+			_ = gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{BRANCHES}})
 		}
 	})
 	return nil
 }
 
-func (gui *Gui) handleCreateResetToBranchMenu(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreateResetToBranchMenu() error {
 	branch := gui.getSelectedBranch()
 	if branch == nil {
 		return nil
@@ -423,14 +422,11 @@ func (gui *Gui) handleCreateResetToBranchMenu(g *gocui.Gui, v *gocui.View) error
 	return gui.createResetMenu(branch.Name)
 }
 
-func (gui *Gui) handleRenameBranch(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleRenameBranch() error {
 	branch := gui.getSelectedBranch()
 	if branch == nil {
 		return nil
 	}
-
-	// TODO: find a way to not checkout the branch here if it's not the current branch (i.e. find some
-	// way to get it to show up in the reflog)
 
 	promptForNewName := func() error {
 		return gui.prompt(promptOpts{
@@ -440,13 +436,21 @@ func (gui *Gui) handleRenameBranch(g *gocui.Gui, v *gocui.View) error {
 				if err := gui.GitCommand.RenameBranch(branch.Name, newBranchName); err != nil {
 					return gui.surfaceError(err)
 				}
-				// need to checkout so that the branch shows up in our reflog and therefore
-				// doesn't get lost among all the other branches when we switch to something else
-				if err := gui.GitCommand.Checkout(newBranchName, commands.CheckoutOptions{Force: false}); err != nil {
-					return gui.surfaceError(err)
+
+				// need to find where the branch is now so that we can re-select it. That means we need to refetch the branches synchronously and then find our branch
+				gui.refreshBranches()
+
+				// now that we've got our stuff again we need to find that branch and reselect it.
+				for i, newBranch := range gui.State.Branches {
+					if newBranch.Name == newBranchName {
+						gui.State.Panels.Branches.SetSelectedLineIdx(i)
+						if err := gui.State.Contexts.Branches.HandleRender(); err != nil {
+							return err
+						}
+					}
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC})
+				return nil
 			},
 		})
 	}
@@ -474,7 +478,7 @@ func (gui *Gui) currentBranch() *models.Branch {
 }
 
 func (gui *Gui) handleNewBranchOffCurrentItem() error {
-	context := gui.currentSideContext()
+	context := gui.currentSideListContext()
 
 	item, ok := context.GetSelectedItem()
 	if !ok {
@@ -508,8 +512,8 @@ func (gui *Gui) handleNewBranchOffCurrentItem() error {
 				context.GetPanelState().SetSelectedLineIdx(0)
 			}
 
-			if context.GetKey() != gui.Contexts.Branches.Context.GetKey() {
-				if err := gui.pushContext(gui.Contexts.Branches.Context); err != nil {
+			if context.GetKey() != gui.State.Contexts.Branches.GetKey() {
+				if err := gui.pushContext(gui.State.Contexts.Branches); err != nil {
 					return err
 				}
 			}

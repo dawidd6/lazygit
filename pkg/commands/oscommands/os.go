@@ -24,7 +24,7 @@ import (
 // Platform stores the os state
 type Platform struct {
 	OS              string
-	CatCmd          string
+	CatCmd          []string
 	Shell           string
 	ShellArg        string
 	EscapedQuote    string
@@ -71,7 +71,10 @@ type RunCommandOptions struct {
 func (c *OSCommand) RunCommandWithOutputWithOptions(command string, options RunCommandOptions) (string, error) {
 	c.Log.WithField("command", command).Info("RunCommand")
 	cmd := c.ExecutableFromString(command)
+
+	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0") // prevents git from prompting us for input which would freeze the program
 	cmd.Env = append(cmd.Env, options.EnvVars...)
+
 	return sanitisedCommandOutput(cmd.CombinedOutput())
 }
 
@@ -95,7 +98,19 @@ func (c *OSCommand) RunCommandWithOutput(formatString string, formatArgs ...inte
 	cmd := c.ExecutableFromString(command)
 	output, err := sanitisedCommandOutput(cmd.CombinedOutput())
 	if err != nil {
-		c.Log.WithField("command", command).Error(err)
+		c.Log.WithField("command", command).Error(output)
+	}
+	return output, err
+}
+
+func (c *OSCommand) CatFile(filename string) (string, error) {
+	arr := append(c.Platform.CatCmd, filename)
+	cmdStr := strings.Join(arr, " ")
+	c.Log.WithField("command", cmdStr).Info("Cat")
+	cmd := c.Command(arr[0], arr[1:]...)
+	output, err := sanitisedCommandOutput(cmd.CombinedOutput())
+	if err != nil {
+		c.Log.WithField("command", cmdStr).Error(output)
 	}
 	return output, err
 }
@@ -172,6 +187,17 @@ func (c *OSCommand) RunCommand(formatString string, formatArgs ...interface{}) e
 	return err
 }
 
+// RunShellCommand runs shell commands i.e. 'sh -c <command>'. Good for when you
+// need access to the shell
+func (c *OSCommand) RunShellCommand(command string) error {
+	c.Log.WithField("command", command).Info("RunShellCommand")
+
+	cmd := c.Command(c.Platform.Shell, c.Platform.ShellArg, command)
+	_, err := sanitisedCommandOutput(cmd.CombinedOutput())
+
+	return err
+}
+
 // FileType tells us if the file is a file, directory or other
 func (c *OSCommand) FileType(path string) string {
 	fileInfo, err := os.Stat(path)
@@ -182,16 +208,6 @@ func (c *OSCommand) FileType(path string) string {
 		return "directory"
 	}
 	return "file"
-}
-
-// RunDirectCommand wrapper around direct commands
-func (c *OSCommand) RunDirectCommand(command string) (string, error) {
-	c.Log.WithField("command", command).Info("RunDirectCommand")
-
-	return sanitisedCommandOutput(
-		c.Command(c.Platform.Shell, c.Platform.ShellArg, command).
-			CombinedOutput(),
-	)
 }
 
 func sanitisedCommandOutput(output []byte, err error) (string, error) {
@@ -239,6 +255,11 @@ func (c *OSCommand) PrepareSubProcess(cmdName string, commandArgs ...string) *ex
 		cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 	}
 	return cmd
+}
+
+// PrepareShellSubProcess returns the pointer to a custom command
+func (c *OSCommand) PrepareShellSubProcess(command string) *exec.Cmd {
+	return c.PrepareSubProcess(c.Platform.Shell, c.Platform.ShellArg, command)
 }
 
 // Quote wraps a message in platform-specific quotation marks
@@ -347,11 +368,6 @@ func (c *OSCommand) GetLazygitPath() string {
 		ex = os.Args[0] // fallback to the first call argument if needed
 	}
 	return `"` + filepath.ToSlash(ex) + `"`
-}
-
-// RunCustomCommand returns the pointer to a custom command
-func (c *OSCommand) RunCustomCommand(command string) *exec.Cmd {
-	return c.PrepareSubProcess(c.Platform.Shell, c.Platform.ShellArg, command)
 }
 
 // PipeCommands runs a heap of commands and pipes their inputs/outputs together like A | B | C

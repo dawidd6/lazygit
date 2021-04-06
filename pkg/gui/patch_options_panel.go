@@ -3,11 +3,10 @@ package gui
 import (
 	"fmt"
 
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
 )
 
-func (gui *Gui) handleCreatePatchOptionsMenu(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreatePatchOptionsMenu() error {
 	if !gui.GitCommand.PatchManager.Active() {
 		return gui.createErrorPanel(gui.Tr.NoPatchError)
 	}
@@ -43,7 +42,7 @@ func (gui *Gui) handleCreatePatchOptionsMenu(g *gocui.Gui, v *gocui.View) error 
 			},
 		}...)
 
-		if gui.currentContext().GetKey() == gui.Contexts.BranchCommits.Context.GetKey() {
+		if gui.currentContext().GetKey() == gui.State.Contexts.BranchCommits.GetKey() {
 			selectedCommit := gui.getSelectedLocalCommit()
 			if selectedCommit != nil && gui.GitCommand.PatchManager.To != selectedCommit.Sha {
 				// adding this option to index 1
@@ -180,7 +179,7 @@ func (gui *Gui) handleApplyPatch(reverse bool) error {
 func (gui *Gui) handleResetPatch() error {
 	gui.GitCommand.PatchManager.Reset()
 	if gui.currentContextKeyIgnoringPopups() == MAIN_PATCH_BUILDING_CONTEXT_KEY {
-		if err := gui.pushContext(gui.Contexts.CommitFiles.Context); err != nil {
+		if err := gui.pushContext(gui.State.Contexts.CommitFiles); err != nil {
 			return err
 		}
 	}

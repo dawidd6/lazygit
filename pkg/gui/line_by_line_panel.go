@@ -16,8 +16,10 @@ import (
 // use cases
 
 // these represent what select mode we're in
+type SelectMode int
+
 const (
-	LINE = iota
+	LINE SelectMode = iota
 	RANGE
 	HUNK
 )
@@ -25,6 +27,8 @@ const (
 // returns whether the patch is empty so caller can escape if necessary
 // both diffs should be non-coloured because we'll parse them and colour them here
 func (gui *Gui) refreshLineByLinePanel(diff string, secondaryDiff string, secondaryFocused bool, selectedLineIdx int, state *lBlPanelState) (bool, error) {
+	gui.splitMainPanel(true)
+
 	patchParser, err := patch.NewPatchParser(gui.Log, diff)
 	if err != nil {
 		return false, nil
@@ -80,9 +84,8 @@ func (gui *Gui) refreshLineByLinePanel(diff string, secondaryDiff string, second
 		return false, err
 	}
 
-	secondaryView := gui.getSecondaryView()
-	secondaryView.Highlight = true
-	secondaryView.Wrap = false
+	gui.Views.Secondary.Highlight = true
+	gui.Views.Secondary.Wrap = false
 
 	secondaryPatchParser, err := patch.NewPatchParser(gui.Log, secondaryDiff)
 	if err != nil {
@@ -90,7 +93,7 @@ func (gui *Gui) refreshLineByLinePanel(diff string, secondaryDiff string, second
 	}
 
 	gui.g.Update(func(*gocui.Gui) error {
-		gui.setViewContent(gui.getSecondaryView(), secondaryPatchParser.Render(-1, -1, nil))
+		gui.setViewContent(gui.Views.Secondary, secondaryPatchParser.Render(-1, -1, nil))
 		return nil
 	})
 
@@ -176,13 +179,13 @@ func (gui *Gui) LBLSelectLine(newSelectedLineIdx int, state *lBlPanelState) erro
 	return gui.focusSelection(false, state)
 }
 
-func (gui *Gui) handleLBLMouseDown(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleLBLMouseDown() error {
 	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
 		if gui.popupPanelFocused() {
 			return nil
 		}
 
-		newSelectedLineIdx := v.SelectedLineIdx()
+		newSelectedLineIdx := gui.Views.Main.SelectedLineIdx()
 		state.FirstLineIdx = newSelectedLineIdx
 		state.LastLineIdx = newSelectedLineIdx
 
@@ -192,49 +195,27 @@ func (gui *Gui) handleLBLMouseDown(g *gocui.Gui, v *gocui.View) error {
 	})
 }
 
-func (gui *Gui) handleMouseDrag(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleMouseDrag() error {
 	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
 		if gui.popupPanelFocused() {
 			return nil
 		}
 
-		return gui.LBLSelectLine(v.SelectedLineIdx(), state)
-	})
-}
-
-func (gui *Gui) handleMouseScrollUp(g *gocui.Gui, v *gocui.View) error {
-	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
-		if gui.popupPanelFocused() {
-			return nil
-		}
-
-		state.SelectMode = LINE
-
-		return gui.LBLCycleLine(-1, state)
-	})
-}
-
-func (gui *Gui) handleMouseScrollDown(g *gocui.Gui, v *gocui.View) error {
-	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
-		if gui.popupPanelFocused() {
-			return nil
-		}
-
-		state.SelectMode = LINE
-
-		return gui.LBLCycleLine(1, state)
+		return gui.LBLSelectLine(gui.Views.Main.SelectedLineIdx(), state)
 	})
 }
 
 func (gui *Gui) getSelectedCommitFileName() string {
-	return gui.State.CommitFiles[gui.State.Panels.CommitFiles.SelectedLineIdx].Name
+	idx := gui.State.Panels.CommitFiles.SelectedLineIdx
+
+	return gui.State.CommitFileManager.GetItemAtIndex(idx).GetPath()
 }
 
 func (gui *Gui) refreshMainViewForLineByLine(state *lBlPanelState) error {
 	var includedLineIndices []int
 	// I'd prefer not to have knowledge of contexts using this file but I'm not sure
 	// how to get around this
-	if gui.currentContext().GetKey() == gui.Contexts.PatchBuilding.Context.GetKey() {
+	if gui.currentContext().GetKey() == gui.State.Contexts.PatchBuilding.GetKey() {
 		filename := gui.getSelectedCommitFileName()
 		var err error
 		includedLineIndices, err = gui.GitCommand.PatchManager.GetFileIncLineIndices(filename)
@@ -244,12 +225,11 @@ func (gui *Gui) refreshMainViewForLineByLine(state *lBlPanelState) error {
 	}
 	colorDiff := state.PatchParser.Render(state.FirstLineIdx, state.LastLineIdx, includedLineIndices)
 
-	mainView := gui.getMainView()
-	mainView.Highlight = true
-	mainView.Wrap = false
+	gui.Views.Main.Highlight = true
+	gui.Views.Main.Wrap = false
 
 	gui.g.Update(func(*gocui.Gui) error {
-		gui.setViewContent(gui.getMainView(), colorDiff)
+		gui.setViewContent(gui.Views.Main, colorDiff)
 		return nil
 	})
 
@@ -259,7 +239,7 @@ func (gui *Gui) refreshMainViewForLineByLine(state *lBlPanelState) error {
 // focusSelection works out the best focus for the staging panel given the
 // selected line and size of the hunk
 func (gui *Gui) focusSelection(includeCurrentHunk bool, state *lBlPanelState) error {
-	stagingView := gui.getMainView()
+	stagingView := gui.Views.Main
 
 	_, viewHeight := stagingView.Size()
 	bufferHeight := viewHeight - 1
@@ -337,9 +317,9 @@ func (gui *Gui) handleOpenFileAtLine() error {
 		// again, would be good to use inheritance here (or maybe even composition)
 		var filename string
 		switch gui.State.MainContext {
-		case gui.Contexts.PatchBuilding.Context.GetKey():
+		case gui.State.Contexts.PatchBuilding.GetKey():
 			filename = gui.getSelectedCommitFileName()
-		case gui.Contexts.Staging.Context.GetKey():
+		case gui.State.Contexts.Staging.GetKey():
 			file := gui.getSelectedFile()
 			if file == nil {
 				return nil
@@ -363,7 +343,7 @@ func (gui *Gui) handleOpenFileAtLine() error {
 
 func (gui *Gui) handleLineByLineNextPage() error {
 	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
-		newSelectedLineIdx := state.SelectedLineIdx + gui.pageDelta(gui.getMainView())
+		newSelectedLineIdx := state.SelectedLineIdx + gui.pageDelta(gui.Views.Main)
 
 		return gui.lineByLineNavigateTo(newSelectedLineIdx, state)
 	})
@@ -371,7 +351,7 @@ func (gui *Gui) handleLineByLineNextPage() error {
 
 func (gui *Gui) handleLineByLinePrevPage() error {
 	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
-		newSelectedLineIdx := state.SelectedLineIdx - gui.pageDelta(gui.getMainView())
+		newSelectedLineIdx := state.SelectedLineIdx - gui.pageDelta(gui.Views.Main)
 
 		return gui.lineByLineNavigateTo(newSelectedLineIdx, state)
 	})

@@ -3,7 +3,6 @@ package gui
 import (
 	"strings"
 
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands/patch"
 )
 
@@ -27,11 +26,11 @@ func (gui *Gui) refreshStagingPanel(forceSecondaryFocused bool, selectedLineIdx 
 	}
 
 	if secondaryFocused {
-		gui.getMainView().Title = gui.Tr.StagedChanges
-		gui.getSecondaryView().Title = gui.Tr.UnstagedChanges
+		gui.Views.Main.Title = gui.Tr.StagedChanges
+		gui.Views.Secondary.Title = gui.Tr.UnstagedChanges
 	} else {
-		gui.getMainView().Title = gui.Tr.UnstagedChanges
-		gui.getSecondaryView().Title = gui.Tr.StagedChanges
+		gui.Views.Main.Title = gui.Tr.UnstagedChanges
+		gui.Views.Secondary.Title = gui.Tr.StagedChanges
 	}
 
 	// note for custom diffs, we'll need to send a flag here saying not to use the custom diff
@@ -60,11 +59,11 @@ func (gui *Gui) refreshStagingPanel(forceSecondaryFocused bool, selectedLineIdx 
 	return nil
 }
 
-func (gui *Gui) handleTogglePanelClick(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleTogglePanelClick() error {
 	return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
 		state.SecondaryFocused = !state.SecondaryFocused
 
-		return gui.refreshStagingPanel(false, v.SelectedLineIdx(), state)
+		return gui.refreshStagingPanel(false, gui.Views.Secondary.SelectedLineIdx(), state)
 	})
 }
 
@@ -85,7 +84,7 @@ func (gui *Gui) handleTogglePanel() error {
 func (gui *Gui) handleStagingEscape() error {
 	gui.escapeLineByLinePanel()
 
-	return gui.pushContext(gui.Contexts.Files.Context)
+	return gui.pushContext(gui.State.Contexts.Files)
 }
 
 func (gui *Gui) handleToggleStagedSelection() error {
@@ -108,7 +107,7 @@ func (gui *Gui) handleResetSelection() error {
 				handlersManageFocus: true,
 				handleConfirm: func() error {
 					return gui.withLBLActiveCheck(func(state *lBlPanelState) error {
-						if err := gui.pushContext(gui.Contexts.Staging.Context); err != nil {
+						if err := gui.pushContext(gui.State.Contexts.Staging); err != nil {
 							return err
 						}
 
@@ -116,7 +115,7 @@ func (gui *Gui) handleResetSelection() error {
 					})
 				},
 				handleClose: func() error {
-					return gui.pushContext(gui.Contexts.Staging.Context)
+					return gui.pushContext(gui.State.Contexts.Staging)
 				},
 			})
 		} else {
@@ -152,7 +151,7 @@ func (gui *Gui) applySelection(reverse bool, state *lBlPanelState) error {
 		state.SelectMode = LINE
 	}
 
-	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES}}); err != nil {
+	if err := gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{FILES}}); err != nil {
 		return err
 	}
 	if err := gui.refreshStagingPanel(false, -1, state); err != nil {

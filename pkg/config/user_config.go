@@ -35,6 +35,7 @@ type GuiConfig struct {
 	Theme                    ThemeConfig        `yaml:"theme"`
 	CommitLength             CommitLengthConfig `yaml:"commitLength"`
 	SkipNoStagedFilesWarning bool               `yaml:"skipNoStagedFilesWarning"`
+	ShowFileTree             bool               `yaml:"showFileTree"`
 }
 
 type ThemeConfig struct {
@@ -175,6 +176,7 @@ type KeybindingFilesConfig struct {
 	ToggleStagedAll          string `yaml:"toggleStagedAll"`
 	ViewResetOptions         string `yaml:"viewResetOptions"`
 	Fetch                    string `yaml:"fetch"`
+	ToggleTreeView           string `yaml:"toggleTreeView"`
 }
 
 type KeybindingBranchesConfig struct {
@@ -323,7 +325,7 @@ func GetDefaultConfig() *UserConfig {
 		Reporting:            "undetermined",
 		SplashUpdatesIndex:   0,
 		ConfirmOnQuit:        false,
-		QuitOnTopLevelReturn: true,
+		QuitOnTopLevelReturn: false,
 		Keybinding: KeybindingConfig{
 			Universal: KeybindingUniversalConfig{
 				Quit:                         "q",
@@ -379,7 +381,7 @@ func GetDefaultConfig() *UserConfig {
 				DiffingMenuAlt:               "<c-e>",
 				CopyToClipboard:              "<c-o>",
 				SubmitEditorText:             "<enter>",
-				AppendNewline:                "<tab>",
+				AppendNewline:                "<a-enter>",
 			},
 			Status: KeybindingStatusConfig{
 				CheckForUpdate:      "u",
@@ -398,6 +400,7 @@ func GetDefaultConfig() *UserConfig {
 				ToggleStagedAll:          "a",
 				ViewResetOptions:         "D",
 				Fetch:                    "f",
+				ToggleTreeView:           "`",
 			},
 			Branches: KeybindingBranchesConfig{
 				CopyPullRequestURL:     "<c-y>",

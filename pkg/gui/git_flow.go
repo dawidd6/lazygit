@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
@@ -32,19 +31,19 @@ func (gui *Gui) gitFlowFinishBranch(gitFlowConfig string, branchName string) err
 		return gui.createErrorPanel(gui.Tr.NotAGitFlowBranch)
 	}
 
-	subProcess := gui.OSCommand.PrepareSubProcess("git", "flow", branchType, "finish", suffix)
-	gui.SubProcess = subProcess
-	return gui.Errors.ErrSubProcess
+	return gui.runSubprocessWithSuspense(
+		gui.OSCommand.PrepareSubProcess("git", "flow", branchType, "finish", suffix),
+	)
 }
 
-func (gui *Gui) handleCreateGitFlowMenu(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreateGitFlowMenu() error {
 	branch := gui.getSelectedBranch()
 	if branch == nil {
 		return nil
 	}
 
 	// get config
-	gitFlowConfig, err := gui.OSCommand.RunCommandWithOutput("git config --local --get-regexp gitflow")
+	gitFlowConfig, err := gui.GitCommand.RunCommandWithOutput("git config --local --get-regexp gitflow")
 	if err != nil {
 		return gui.createErrorPanel("You need to install git-flow and enable it in this repo to use git-flow features")
 	}
@@ -56,9 +55,9 @@ func (gui *Gui) handleCreateGitFlowMenu(g *gocui.Gui, v *gocui.View) error {
 			return gui.prompt(promptOpts{
 				title: title,
 				handleConfirm: func(name string) error {
-					subProcess := gui.OSCommand.PrepareSubProcess("git", "flow", branchType, "start", name)
-					gui.SubProcess = subProcess
-					return gui.Errors.ErrSubProcess
+					return gui.runSubprocessWithSuspense(
+						gui.OSCommand.PrepareSubProcess("git", "flow", branchType, "start", name),
+					)
 				},
 			})
 		}

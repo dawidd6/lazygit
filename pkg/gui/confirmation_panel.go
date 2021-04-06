@@ -108,19 +108,17 @@ func (gui *Gui) wrappedPromptConfirmationFunction(handlersManageFocus bool, func
 	}
 }
 
-func (gui *Gui) deleteConfirmationView() {
+func (gui *Gui) clearConfirmationViewKeyBindings() {
 	keybindingConfig := gui.Config.GetUserConfig().Keybinding
 	_ = gui.g.DeleteKeybinding("confirmation", gui.getKey(keybindingConfig.Universal.Confirm), gocui.ModNone)
 	_ = gui.g.DeleteKeybinding("confirmation", gui.getKey(keybindingConfig.Universal.ConfirmAlt1), gocui.ModNone)
 	_ = gui.g.DeleteKeybinding("confirmation", gui.getKey(keybindingConfig.Universal.Return), gocui.ModNone)
-
-	_ = gui.g.DeleteView("confirmation")
 }
 
 func (gui *Gui) closeConfirmationPrompt(handlersManageFocus bool) error {
-	view := gui.getConfirmationView()
-	if view == nil {
-		return nil // if it's already been closed we can just return
+	// we've already closed it so we can just return
+	if !gui.Views.Confirmation.Visible {
+		return nil
 	}
 
 	if !handlersManageFocus {
@@ -129,9 +127,9 @@ func (gui *Gui) closeConfirmationPrompt(handlersManageFocus bool) error {
 		}
 	}
 
-	gui.deleteConfirmationView()
-
-	_, _ = gui.g.SetViewOnBottom("suggestions")
+	gui.clearConfirmationViewKeyBindings()
+	gui.Views.Confirmation.Visible = false
+	gui.Views.Suggestions.Visible = false
 
 	return nil
 }
@@ -172,67 +170,64 @@ func (gui *Gui) getConfirmationPanelDimensions(wrap bool, prompt string) (int, i
 		height/2 + panelHeight/2
 }
 
-func (gui *Gui) prepareConfirmationPanel(title, prompt string, hasLoader bool, findSuggestionsFunc func(string) []*types.Suggestion) (*gocui.View, error) {
+func (gui *Gui) prepareConfirmationPanel(title, prompt string, hasLoader bool, findSuggestionsFunc func(string) []*types.Suggestion) error {
 	x0, y0, x1, y1 := gui.getConfirmationPanelDimensions(true, prompt)
-	confirmationView, err := gui.g.SetView("confirmation", x0, y0, x1, y1, 0)
+	// calling SetView on an existing view returns the same view, so I'm not bothering
+	// to reassign to gui.Views.Confirmation
+	_, err := gui.g.SetView("confirmation", x0, y0, x1, y1, 0)
 	if err != nil {
-		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
-			return nil, err
-		}
-		confirmationView.HasLoader = hasLoader
-		if hasLoader {
-			gui.g.StartTicking()
-		}
-		confirmationView.Title = title
-		confirmationView.Wrap = true
-		confirmationView.FgColor = theme.GocuiDefaultTextColor
+		return err
 	}
+	gui.Views.Confirmation.HasLoader = hasLoader
+	if hasLoader {
+		gui.g.StartTicking()
+	}
+	gui.Views.Confirmation.Title = title
+	gui.Views.Confirmation.Wrap = true
+	gui.Views.Confirmation.FgColor = theme.GocuiDefaultTextColor
 
 	gui.findSuggestions = findSuggestionsFunc
 	if findSuggestionsFunc != nil {
 		suggestionsViewHeight := 11
 		suggestionsView, err := gui.g.SetView("suggestions", x0, y1, x1, y1+suggestionsViewHeight, 0)
 		if err != nil {
-			if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
-				return nil, err
-			}
-			suggestionsView.Wrap = true
-			suggestionsView.FgColor = theme.GocuiDefaultTextColor
+			return err
 		}
+		suggestionsView.Wrap = true
+		suggestionsView.FgColor = theme.GocuiDefaultTextColor
 		gui.setSuggestions([]*types.Suggestion{})
-		_, _ = gui.g.SetViewOnTop("suggestions")
+		suggestionsView.Visible = true
 	}
 
 	gui.g.Update(func(g *gocui.Gui) error {
-		return gui.pushContext(gui.Contexts.Confirmation.Context)
+		return gui.pushContext(gui.State.Contexts.Confirmation)
 	})
-	return confirmationView, nil
+	return nil
 }
 
 func (gui *Gui) createPopupPanel(opts createPopupPanelOpts) error {
 	gui.g.Update(func(g *gocui.Gui) error {
-		// delete the existing confirmation panel if it exists
-		if view, _ := g.View("confirmation"); view != nil {
-			gui.deleteConfirmationView()
-		}
-		confirmationView, err := gui.prepareConfirmationPanel(opts.title, opts.prompt, opts.hasLoader, opts.findSuggestionsFunc)
+		// remove any previous keybindings
+		gui.clearConfirmationViewKeyBindings()
+
+		err := gui.prepareConfirmationPanel(opts.title, opts.prompt, opts.hasLoader, opts.findSuggestionsFunc)
 		if err != nil {
 			return err
 		}
-		confirmationView.Editable = opts.editable
-		confirmationView.Editor = gocui.EditorFunc(gui.defaultEditor)
+		gui.Views.Confirmation.Editable = opts.editable
+		gui.Views.Confirmation.Editor = gocui.EditorFunc(gui.defaultEditor)
 		if opts.editable {
 			go utils.Safe(func() {
 				// TODO: remove this wait (right now if you remove it the EditGotoToEndOfLine method doesn't seem to work)
 				time.Sleep(time.Millisecond)
 				gui.g.Update(func(g *gocui.Gui) error {
-					confirmationView.EditGotoToEndOfLine()
+					gui.Views.Confirmation.EditGotoToEndOfLine()
 					return nil
 				})
 			})
 		}
 
-		gui.renderString("confirmation", opts.prompt)
+		gui.renderString(gui.Views.Confirmation, opts.prompt)
 
 		return gui.setKeyBindings(opts)
 	})
@@ -248,10 +243,10 @@ func (gui *Gui) setKeyBindings(opts createPopupPanelOpts) error {
 		},
 	)
 
-	gui.renderString("options", actions)
+	gui.renderString(gui.Views.Options, actions)
 	var onConfirm func() error
 	if opts.handleConfirmPrompt != nil {
-		onConfirm = gui.wrappedPromptConfirmationFunction(opts.handlersManageFocus, opts.handleConfirmPrompt, func() string { return gui.getConfirmationView().Buffer() })
+		onConfirm = gui.wrappedPromptConfirmationFunction(opts.handlersManageFocus, opts.handleConfirmPrompt, func() string { return gui.Views.Confirmation.Buffer() })
 	} else {
 		onConfirm = gui.wrappedConfirmationFunction(opts.handlersManageFocus, opts.handleConfirm)
 	}
@@ -284,7 +279,7 @@ func (gui *Gui) setKeyBindings(opts createPopupPanelOpts) error {
 		{
 			viewName: "confirmation",
 			key:      gui.getKey(keybindingConfig.Universal.TogglePanel),
-			handler:  func() error { return gui.replaceContext(gui.Contexts.Suggestions.Context) },
+			handler:  func() error { return gui.replaceContext(gui.State.Contexts.Suggestions) },
 		},
 		{
 			viewName: "suggestions",
@@ -304,7 +299,7 @@ func (gui *Gui) setKeyBindings(opts createPopupPanelOpts) error {
 		{
 			viewName: "suggestions",
 			key:      gui.getKey(keybindingConfig.Universal.TogglePanel),
-			handler:  func() error { return gui.replaceContext(gui.Contexts.Confirmation.Context) },
+			handler:  func() error { return gui.replaceContext(gui.State.Contexts.Confirmation) },
 		},
 	}
 
@@ -315,6 +310,12 @@ func (gui *Gui) setKeyBindings(opts createPopupPanelOpts) error {
 	}
 
 	return nil
+}
+
+func (gui *Gui) wrappedHandler(f func() error) func(g *gocui.Gui, v *gocui.View) error {
+	return func(g *gocui.Gui, v *gocui.View) error {
+		return f()
+	}
 }
 
 func (gui *Gui) createErrorPanel(message string) error {
@@ -333,12 +334,6 @@ func (gui *Gui) createErrorPanel(message string) error {
 func (gui *Gui) surfaceError(err error) error {
 	if err == nil {
 		return nil
-	}
-
-	for _, sentinelError := range gui.sentinelErrorsArr() {
-		if err == sentinelError {
-			return err
-		}
 	}
 
 	return gui.createErrorPanel(err.Error())

@@ -1,13 +1,15 @@
 package gui
 
 import (
+	"github.com/fatih/color"
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/gui/presentation"
+	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
 type ListContext struct {
 	ViewName            string
-	ContextKey          string
+	ContextKey          ContextKey
 	GetItemsLength      func() int
 	GetDisplayStrings   func() [][]string
 	OnFocus             func() error
@@ -21,11 +23,16 @@ type ListContext struct {
 
 	Gui                        *Gui
 	ResetMainViewOriginOnFocus bool
-	Kind                       int
+	Kind                       ContextKind
 	ParentContext              Context
 	// we can't know on the calling end whether a Context is actually a nil value without reflection, so we're storing this flag here to tell us. There has got to be a better way around this.
 	hasParent  bool
 	WindowName string
+}
+
+type IListPanelState interface {
+	SetSelectedLineIdx(int)
+	GetSelectedLineIdx() int
 }
 
 type ListItem interface {
@@ -96,11 +103,11 @@ func (lc *ListContext) OnRender() error {
 	return nil
 }
 
-func (lc *ListContext) GetKey() string {
+func (lc *ListContext) GetKey() ContextKey {
 	return lc.ContextKey
 }
 
-func (lc *ListContext) GetKind() int {
+func (lc *ListContext) GetKind() ContextKind {
 	return lc.Kind
 }
 
@@ -128,6 +135,15 @@ func (lc *ListContext) HandleFocus() error {
 
 	view.FocusPoint(0, lc.GetPanelState().GetSelectedLineIdx())
 
+	if lc.ResetMainViewOriginOnFocus {
+		if err := lc.Gui.resetOrigin(lc.Gui.Views.Main); err != nil {
+			return err
+		}
+		if err := lc.Gui.resetOrigin(lc.Gui.Views.Secondary); err != nil {
+			return err
+		}
+	}
+
 	if lc.Gui.State.Modes.Diffing.Active() {
 		return lc.Gui.renderDiff()
 	}
@@ -143,11 +159,11 @@ func (lc *ListContext) HandleRender() error {
 	return lc.OnRender()
 }
 
-func (lc *ListContext) handlePrevLine(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handlePrevLine() error {
 	return lc.handleLineChange(-1)
 }
 
-func (lc *ListContext) handleNextLine(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handleNextLine() error {
 	return lc.handleLineChange(1)
 }
 
@@ -169,19 +185,10 @@ func (lc *ListContext) handleLineChange(change int) error {
 	lc.Gui.changeSelectedLine(lc.GetPanelState(), lc.GetItemsLength(), change)
 	view.FocusPoint(0, lc.GetPanelState().GetSelectedLineIdx())
 
-	if lc.ResetMainViewOriginOnFocus {
-		if err := lc.Gui.resetOrigin(lc.Gui.getMainView()); err != nil {
-			return err
-		}
-		if err := lc.Gui.resetOrigin(lc.Gui.getSecondaryView()); err != nil {
-			return err
-		}
-	}
-
 	return lc.HandleFocus()
 }
 
-func (lc *ListContext) handleNextPage(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handleNextPage() error {
 	view, err := lc.Gui.g.View(lc.ViewName)
 	if err != nil {
 		return nil
@@ -191,15 +198,15 @@ func (lc *ListContext) handleNextPage(g *gocui.Gui, v *gocui.View) error {
 	return lc.handleLineChange(delta)
 }
 
-func (lc *ListContext) handleGotoTop(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handleGotoTop() error {
 	return lc.handleLineChange(-lc.GetItemsLength())
 }
 
-func (lc *ListContext) handleGotoBottom(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handleGotoBottom() error {
 	return lc.handleLineChange(lc.GetItemsLength())
 }
 
-func (lc *ListContext) handlePrevPage(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handlePrevPage() error {
 	view, err := lc.Gui.g.View(lc.ViewName)
 	if err != nil {
 		return nil
@@ -210,13 +217,18 @@ func (lc *ListContext) handlePrevPage(g *gocui.Gui, v *gocui.View) error {
 	return lc.handleLineChange(-delta)
 }
 
-func (lc *ListContext) handleClick(g *gocui.Gui, v *gocui.View) error {
+func (lc *ListContext) handleClick() error {
 	if !lc.Gui.isPopupPanel(lc.ViewName) && lc.Gui.popupPanelFocused() {
 		return nil
 	}
 
+	view, err := lc.Gui.g.View(lc.ViewName)
+	if err != nil {
+		return nil
+	}
+
 	prevSelectedLineIdx := lc.GetPanelState().GetSelectedLineIdx()
-	newSelectedLineIdx := v.SelectedLineIdx()
+	newSelectedLineIdx := view.SelectedLineIdx()
 
 	// we need to focus the view
 	if err := lc.Gui.pushContext(lc); err != nil {
@@ -245,7 +257,7 @@ func (gui *Gui) menuListContext() *ListContext {
 	return &ListContext{
 		ViewName:                   "menu",
 		ContextKey:                 "menu",
-		GetItemsLength:             func() int { return gui.getMenuView().LinesHeight() },
+		GetItemsLength:             func() int { return gui.Views.Menu.LinesHeight() },
 		GetPanelState:              func() IListPanelState { return gui.State.Panels.Menu },
 		OnFocus:                    gui.handleMenuSelect,
 		OnClickSelectedItem:        gui.onMenuPress,
@@ -262,7 +274,7 @@ func (gui *Gui) filesListContext() *ListContext {
 	return &ListContext{
 		ViewName:                   "files",
 		ContextKey:                 FILES_CONTEXT_KEY,
-		GetItemsLength:             func() int { return len(gui.State.Files) },
+		GetItemsLength:             func() int { return gui.State.FileManager.GetItemsLength() },
 		GetPanelState:              func() IListPanelState { return gui.State.Panels.Files },
 		OnFocus:                    gui.focusAndSelectFile,
 		OnClickSelectedItem:        gui.handleFilePress,
@@ -270,10 +282,16 @@ func (gui *Gui) filesListContext() *ListContext {
 		ResetMainViewOriginOnFocus: false,
 		Kind:                       SIDE_CONTEXT,
 		GetDisplayStrings: func() [][]string {
-			return presentation.GetFileListDisplayStrings(gui.State.Files, gui.State.Modes.Diffing.Ref, gui.State.Submodules)
+			lines := gui.State.FileManager.Render(gui.State.Modes.Diffing.Ref, gui.State.Submodules)
+			mappedLines := make([][]string, len(lines))
+			for i, line := range lines {
+				mappedLines[i] = []string{line}
+			}
+
+			return mappedLines
 		},
 		SelectedItem: func() (ListItem, bool) {
-			item := gui.getSelectedFile()
+			item := gui.getSelectedFileNode()
 			return item, item != nil
 		},
 	}
@@ -446,17 +464,27 @@ func (gui *Gui) commitFilesListContext() *ListContext {
 		ViewName:                   "commitFiles",
 		WindowName:                 "commits",
 		ContextKey:                 COMMIT_FILES_CONTEXT_KEY,
-		GetItemsLength:             func() int { return len(gui.State.CommitFiles) },
+		GetItemsLength:             func() int { return gui.State.CommitFileManager.GetItemsLength() },
 		GetPanelState:              func() IListPanelState { return gui.State.Panels.CommitFiles },
 		OnFocus:                    gui.handleCommitFileSelect,
 		Gui:                        gui,
 		ResetMainViewOriginOnFocus: true,
 		Kind:                       SIDE_CONTEXT,
 		GetDisplayStrings: func() [][]string {
-			return presentation.GetCommitFileListDisplayStrings(gui.State.CommitFiles, gui.State.Modes.Diffing.Ref)
+			if gui.State.CommitFileManager.GetItemsLength() == 0 {
+				return [][]string{{utils.ColoredString("(none)", color.FgRed)}}
+			}
+
+			lines := gui.State.CommitFileManager.Render(gui.State.Modes.Diffing.Ref, gui.GitCommand.PatchManager)
+			mappedLines := make([][]string, len(lines))
+			for i, line := range lines {
+				mappedLines[i] = []string{line}
+			}
+
+			return mappedLines
 		},
 		SelectedItem: func() (ListItem, bool) {
-			item := gui.getSelectedCommitFile()
+			item := gui.getSelectedCommitFileNode()
 			return item, item != nil
 		},
 	}
@@ -502,19 +530,20 @@ func (gui *Gui) suggestionsListContext() *ListContext {
 
 func (gui *Gui) getListContexts() []*ListContext {
 	return []*ListContext{
-		gui.menuListContext(),
-		gui.filesListContext(),
-		gui.branchesListContext(),
-		gui.remotesListContext(),
-		gui.remoteBranchesListContext(),
-		gui.tagsListContext(),
-		gui.branchCommitsListContext(),
-		gui.reflogCommitsListContext(),
-		gui.subCommitsListContext(),
-		gui.stashListContext(),
-		gui.commitFilesListContext(),
-		gui.submodulesListContext(),
-		gui.suggestionsListContext(),
+		gui.State.Contexts.Menu,
+		gui.State.Contexts.Files,
+		gui.State.Contexts.Branches,
+		gui.State.Contexts.Remotes,
+		gui.State.Contexts.RemoteBranches,
+		gui.State.Contexts.Tags,
+		gui.State.Contexts.BranchCommits,
+		gui.State.Contexts.BranchCommits,
+		gui.State.Contexts.ReflogCommits,
+		gui.State.Contexts.SubCommits,
+		gui.State.Contexts.Stash,
+		gui.State.Contexts.CommitFiles,
+		gui.State.Contexts.Submodules,
+		gui.State.Contexts.Suggestions,
 	}
 }
 
@@ -524,17 +553,19 @@ func (gui *Gui) getListContextKeyBindings() []*Binding {
 	keybindingConfig := gui.Config.GetUserConfig().Keybinding
 
 	for _, listContext := range gui.getListContexts() {
+		listContext := listContext
+
 		bindings = append(bindings, []*Binding{
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.PrevItemAlt), Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.PrevItem), Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gocui.MouseWheelUp, Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.NextItemAlt), Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.NextItem), Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.PrevPage), Modifier: gocui.ModNone, Handler: listContext.handlePrevPage, Description: gui.Tr.LcPrevPage},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.NextPage), Modifier: gocui.ModNone, Handler: listContext.handleNextPage, Description: gui.Tr.LcNextPage},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gui.getKey(keybindingConfig.Universal.GotoTop), Modifier: gocui.ModNone, Handler: listContext.handleGotoTop, Description: gui.Tr.LcGotoTop},
-			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{listContext.ContextKey}, Key: gocui.MouseWheelDown, Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
-			{ViewName: listContext.ViewName, Contexts: []string{listContext.ContextKey}, Key: gocui.MouseLeft, Modifier: gocui.ModNone, Handler: listContext.handleClick},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.PrevItemAlt), Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.PrevItem), Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gocui.MouseWheelUp, Modifier: gocui.ModNone, Handler: listContext.handlePrevLine},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.NextItemAlt), Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.NextItem), Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.PrevPage), Modifier: gocui.ModNone, Handler: listContext.handlePrevPage, Description: gui.Tr.LcPrevPage},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.NextPage), Modifier: gocui.ModNone, Handler: listContext.handleNextPage, Description: gui.Tr.LcNextPage},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gui.getKey(keybindingConfig.Universal.GotoTop), Modifier: gocui.ModNone, Handler: listContext.handleGotoTop, Description: gui.Tr.LcGotoTop},
+			{ViewName: listContext.ViewName, Tag: "navigation", Contexts: []string{string(listContext.ContextKey)}, Key: gocui.MouseWheelDown, Modifier: gocui.ModNone, Handler: listContext.handleNextLine},
+			{ViewName: listContext.ViewName, Contexts: []string{string(listContext.ContextKey)}, Key: gocui.MouseLeft, Modifier: gocui.ModNone, Handler: listContext.handleClick},
 		}...)
 
 		// the commits panel needs to lazyload things so it has a couple of its own handlers
@@ -548,15 +579,15 @@ func (gui *Gui) getListContextKeyBindings() []*Binding {
 		bindings = append(bindings, []*Binding{
 			{
 				ViewName:    listContext.ViewName,
-				Contexts:    []string{listContext.ContextKey},
+				Contexts:    []string{string(listContext.ContextKey)},
 				Key:         gui.getKey(keybindingConfig.Universal.StartSearch),
-				Handler:     openSearchHandler,
+				Handler:     func() error { return openSearchHandler(listContext.ViewName) },
 				Description: gui.Tr.LcStartSearch,
 				Tag:         "navigation",
 			},
 			{
 				ViewName:    listContext.ViewName,
-				Contexts:    []string{listContext.ContextKey},
+				Contexts:    []string{string(listContext.ContextKey)},
 				Key:         gui.getKey(keybindingConfig.Universal.GotoBottom),
 				Handler:     gotoBottomHandler,
 				Description: gui.Tr.LcGotoBottom,

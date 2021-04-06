@@ -31,32 +31,25 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 
 	minimumHeight := 9
 	minimumWidth := 10
-	if height < minimumHeight || width < minimumWidth {
-		v, err := g.SetView("limit", 0, 0, width-1, height-1, 0)
-		if err != nil {
-			if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
-				return err
-			}
-			v.Title = gui.Tr.NotEnoughSpace
-			v.Wrap = true
-			_, _ = g.SetViewOnTop("limit")
+	var err error
+	gui.Views.Limit, err = g.SetView("limit", 0, 0, width-1, height-1, 0)
+	if err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
 		}
-		return nil
+		gui.Views.Limit.Title = gui.Tr.NotEnoughSpace
+		gui.Views.Limit.Wrap = true
 	}
+	gui.Views.Limit.Visible = height < minimumHeight || width < minimumWidth
 
 	informationStr := gui.informationStr()
 	appStatus := gui.statusManager.getStatusString()
 
 	viewDimensions := gui.getWindowDimensions(informationStr, appStatus)
 
-	_, _ = g.SetViewOnBottom("limit")
-	_ = g.DeleteView("limit")
-
-	textColor := theme.GocuiDefaultTextColor
-
 	// reading more lines into main view buffers upon resize
-	prevMainView, err := gui.g.View("main")
-	if err == nil {
+	prevMainView := gui.Views.Main
+	if prevMainView != nil {
 		_, prevMainHeight := prevMainView.Size()
 		newMainHeight := viewDimensions["main"].Y1 - viewDimensions["main"].Y0 - 1
 		heightDiff := newMainHeight - prevMainHeight
@@ -79,17 +72,17 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			// to render content as soon as it appears, because lazyloaded content (via a pty task)
 			// cares about the size of the view.
 			view, err := g.SetView(viewName, 0, 0, width, height, 0)
-			if err != nil {
-				return view, err
+			if view != nil {
+				view.Visible = false
 			}
-			return g.SetViewOnBottom(viewName)
+			return view, err
 		}
 
 		frameOffset := 1
 		if frame {
 			frameOffset = 0
 		}
-		return g.SetView(
+		view, err := g.SetView(
 			viewName,
 			dimensionsObj.X0-frameOffset,
 			dimensionsObj.Y0-frameOffset,
@@ -97,231 +90,192 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 			dimensionsObj.Y1+frameOffset,
 			0,
 		)
+
+		if view != nil {
+			view.Visible = true
+		}
+
+		return view, err
 	}
 
-	v, err := setViewFromDimensions("main", "main", true)
+	gui.Views.Main, err = setViewFromDimensions("main", "main", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		v.Title = gui.Tr.DiffTitle
-		v.Wrap = true
-		v.FgColor = textColor
-		v.IgnoreCarriageReturns = true
+		gui.Views.Main.Title = gui.Tr.DiffTitle
+		gui.Views.Main.Wrap = true
+		gui.Views.Main.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Main.IgnoreCarriageReturns = true
 	}
 
-	secondaryView, err := setViewFromDimensions("secondary", "secondary", true)
+	gui.Views.Secondary, err = setViewFromDimensions("secondary", "secondary", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		secondaryView.Title = gui.Tr.DiffTitle
-		secondaryView.Wrap = true
-		secondaryView.FgColor = textColor
-		secondaryView.IgnoreCarriageReturns = true
+		gui.Views.Secondary.Title = gui.Tr.DiffTitle
+		gui.Views.Secondary.Wrap = true
+		gui.Views.Secondary.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Secondary.IgnoreCarriageReturns = true
 	}
 
-	hiddenViewOffset := 9999
-
-	if v, err := setViewFromDimensions("status", "status", true); err != nil {
+	if gui.Views.Status, err = setViewFromDimensions("status", "status", true); err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		v.Title = gui.Tr.StatusTitle
-		v.FgColor = textColor
+		gui.Views.Status.Title = gui.Tr.StatusTitle
+		gui.Views.Status.FgColor = theme.GocuiDefaultTextColor
 	}
 
-	filesView, err := setViewFromDimensions("files", "files", true)
+	gui.Views.Files, err = setViewFromDimensions("files", "files", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		filesView.Highlight = true
-		filesView.Title = gui.Tr.FilesTitle
-		filesView.FgColor = textColor
-		filesView.ContainsList = true
+		gui.Views.Files.Highlight = true
+		gui.Views.Files.Title = gui.Tr.FilesTitle
+		gui.Views.Files.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Files.ContainsList = true
 	}
 
-	branchesView, err := setViewFromDimensions("branches", "branches", true)
+	gui.Views.Branches, err = setViewFromDimensions("branches", "branches", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		branchesView.Title = gui.Tr.BranchesTitle
-		branchesView.FgColor = textColor
-		branchesView.ContainsList = true
+		gui.Views.Branches.Title = gui.Tr.BranchesTitle
+		gui.Views.Branches.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Branches.ContainsList = true
 	}
 
-	commitFilesView, err := setViewFromDimensions("commitFiles", gui.Contexts.CommitFiles.Context.GetWindowName(), true)
+	gui.Views.CommitFiles, err = setViewFromDimensions("commitFiles", gui.State.Contexts.CommitFiles.GetWindowName(), true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		commitFilesView.Title = gui.Tr.CommitFiles
-		commitFilesView.FgColor = textColor
-		commitFilesView.ContainsList = true
-		_, _ = gui.g.SetViewOnBottom("commitFiles")
+		gui.Views.CommitFiles.Title = gui.Tr.CommitFiles
+		gui.Views.CommitFiles.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.CommitFiles.ContainsList = true
 	}
+	// if the commit files view is the view to be displayed for its window, we'll display it
+	gui.Views.CommitFiles.Visible = gui.getViewNameForWindow(gui.State.Contexts.CommitFiles.GetWindowName()) == "commitFiles"
 
-	commitsView, err := setViewFromDimensions("commits", "commits", true)
+	gui.Views.Commits, err = setViewFromDimensions("commits", "commits", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		commitsView.Title = gui.Tr.CommitsTitle
-		commitsView.FgColor = textColor
-		commitsView.ContainsList = true
+		gui.Views.Commits.Title = gui.Tr.CommitsTitle
+		gui.Views.Commits.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Commits.ContainsList = true
 	}
 
-	stashView, err := setViewFromDimensions("stash", "stash", true)
+	gui.Views.Stash, err = setViewFromDimensions("stash", "stash", true)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		stashView.Title = gui.Tr.StashTitle
-		stashView.FgColor = textColor
-		stashView.ContainsList = true
+		gui.Views.Stash.Title = gui.Tr.StashTitle
+		gui.Views.Stash.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Stash.ContainsList = true
 	}
 
-	if gui.getCommitMessageView() == nil {
-		// doesn't matter where this view starts because it will be hidden
-		if commitMessageView, err := g.SetView("commitMessage", hiddenViewOffset, hiddenViewOffset, hiddenViewOffset+10, hiddenViewOffset+10, 0); err != nil {
-			if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
-				return err
-			}
-			_, _ = g.SetViewOnBottom("commitMessage")
-			commitMessageView.Title = gui.Tr.CommitMessage
-			commitMessageView.FgColor = textColor
-			commitMessageView.Editable = true
-			commitMessageView.Editor = gocui.EditorFunc(gui.commitMessageEditor)
-		}
-	}
-
-	if check, _ := g.View("credentials"); check == nil {
-		// doesn't matter where this view starts because it will be hidden
-		if credentialsView, err := g.SetView("credentials", hiddenViewOffset, hiddenViewOffset, hiddenViewOffset+10, hiddenViewOffset+10, 0); err != nil {
-			if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
-				return err
-			}
-			_, _ = g.SetViewOnBottom("credentials")
-			credentialsView.Title = gui.Tr.CredentialsUsername
-			credentialsView.FgColor = textColor
-			credentialsView.Editable = true
-		}
-	}
-
-	if v, err := setViewFromDimensions("options", "options", false); err != nil {
+	if gui.Views.Options, err = setViewFromDimensions("options", "options", false); err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		v.Frame = false
-		v.FgColor = theme.OptionsColor
-
-		// doing this here because it'll only happen once
-		if err := gui.onInitialViewsCreation(); err != nil {
-			return err
-		}
+		gui.Views.Options.Frame = false
+		gui.Views.Options.FgColor = theme.OptionsColor
 	}
 
 	// this view takes up one character. Its only purpose is to show the slash when searching
-	if searchPrefixView, err := setViewFromDimensions("searchPrefix", "searchPrefix", false); err != nil {
+	if gui.Views.SearchPrefix, err = setViewFromDimensions("searchPrefix", "searchPrefix", false); err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
 
-		searchPrefixView.BgColor = gocui.ColorDefault
-		searchPrefixView.FgColor = gocui.ColorGreen
-		searchPrefixView.Frame = false
-		gui.setViewContent(searchPrefixView, SEARCH_PREFIX)
+		gui.Views.SearchPrefix.BgColor = gocui.ColorDefault
+		gui.Views.SearchPrefix.FgColor = gocui.ColorGreen
+		gui.Views.SearchPrefix.Frame = false
+		gui.setViewContent(gui.Views.SearchPrefix, SEARCH_PREFIX)
 	}
 
-	if searchView, err := setViewFromDimensions("search", "search", false); err != nil {
+	if gui.Views.Search, err = setViewFromDimensions("search", "search", false); err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
 
-		searchView.BgColor = gocui.ColorDefault
-		searchView.FgColor = gocui.ColorGreen
-		searchView.Frame = false
-		searchView.Editable = true
+		gui.Views.Search.BgColor = gocui.ColorDefault
+		gui.Views.Search.FgColor = gocui.ColorGreen
+		gui.Views.Search.Frame = false
+		gui.Views.Search.Editable = true
 	}
 
-	if appStatusView, err := setViewFromDimensions("appStatus", "appStatus", false); err != nil {
+	if gui.Views.AppStatus, err = setViewFromDimensions("appStatus", "appStatus", false); err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		appStatusView.BgColor = gocui.ColorDefault
-		appStatusView.FgColor = gocui.ColorCyan
-		appStatusView.Frame = false
-		_, _ = g.SetViewOnBottom("appStatus")
+		gui.Views.AppStatus.BgColor = gocui.ColorDefault
+		gui.Views.AppStatus.FgColor = gocui.ColorCyan
+		gui.Views.AppStatus.Frame = false
+		gui.Views.AppStatus.Visible = false
 	}
 
-	informationView, err := setViewFromDimensions("information", "information", false)
+	gui.Views.Information, err = setViewFromDimensions("information", "information", false)
 	if err != nil {
 		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
 			return err
 		}
-		informationView.BgColor = gocui.ColorDefault
-		informationView.FgColor = gocui.ColorGreen
-		informationView.Frame = false
-		gui.renderString("information", INFO_SECTION_PADDING+informationStr)
+		gui.Views.Information.BgColor = gocui.ColorDefault
+		gui.Views.Information.FgColor = gocui.ColorGreen
+		gui.Views.Information.Frame = false
+		gui.renderString(gui.Views.Information, INFO_SECTION_PADDING+informationStr)
 	}
 	if gui.State.OldInformation != informationStr {
-		gui.setViewContent(informationView, informationStr)
+		gui.setViewContent(gui.Views.Information, informationStr)
 		gui.State.OldInformation = informationStr
 	}
 
-	if gui.g.CurrentView() == nil {
-		initialContext := gui.Contexts.Files.Context
-		if gui.State.Modes.Filtering.Active() {
-			initialContext = gui.Contexts.BranchCommits.Context
-		}
-
-		if err := gui.pushContext(initialContext); err != nil {
+	if !gui.ViewsSetup {
+		if err := gui.onInitialViewsCreation(); err != nil {
 			return err
 		}
+
+		gui.ViewsSetup = true
 	}
 
-	type listContextState struct {
-		view        *gocui.View
-		listContext *ListContext
+	if !gui.State.ViewsSetup {
+		if err := gui.onInitialViewsCreationForRepo(); err != nil {
+			return err
+		}
+
+		gui.State.ViewsSetup = true
 	}
 
-	// TODO: don't we already have the view included in the context object itself? Or might that change in a way we don't want reflected here?
-	listContextStates := []listContextState{
-		{view: filesView, listContext: gui.filesListContext()},
-		{view: filesView, listContext: gui.submodulesListContext()},
-		{view: branchesView, listContext: gui.branchesListContext()},
-		{view: branchesView, listContext: gui.remotesListContext()},
-		{view: branchesView, listContext: gui.remoteBranchesListContext()},
-		{view: branchesView, listContext: gui.tagsListContext()},
-		{view: commitsView, listContext: gui.branchCommitsListContext()},
-		{view: commitsView, listContext: gui.reflogCommitsListContext()},
-		{view: stashView, listContext: gui.stashListContext()},
-		{view: commitFilesView, listContext: gui.commitFilesListContext()},
-	}
-
-	// menu view might not exist so we check to be safe
-	if menuView, err := gui.g.View("menu"); err == nil {
-		listContextStates = append(listContextStates, listContextState{view: menuView, listContext: gui.menuListContext()})
-	}
-	for _, listContextState := range listContextStates {
-		// ignore contexts whose view is owned by another context right now
-		if listContextState.view.Context != listContextState.listContext.GetKey() {
+	for _, listContext := range gui.getListContexts() {
+		view, err := gui.g.View(listContext.ViewName)
+		if err != nil {
 			continue
 		}
-		// check if the selected line is now out of view and if so refocus it
-		listContextState.view.FocusPoint(0, listContextState.listContext.GetPanelState().GetSelectedLineIdx())
 
-		listContextState.view.SelBgColor = theme.GocuiSelectedLineBgColor
+		// ignore contexts whose view is owned by another context right now
+		if ContextKey(view.Context) != listContext.GetKey() {
+			continue
+		}
+
+		// check if the selected line is now out of view and if so refocus it
+		view.FocusPoint(0, listContext.GetPanelState().GetSelectedLineIdx())
+
+		view.SelBgColor = theme.GocuiSelectedLineBgColor
 
 		// I doubt this is expensive though it's admittedly redundant after the first render
-		listContextState.view.SetOnSelectItem(gui.onSelectItemWrapper(listContextState.listContext.onSearchSelect))
+		view.SetOnSelectItem(gui.onSelectItemWrapper(listContext.onSearchSelect))
 	}
 
-	gui.getMainView().SetOnSelectItem(gui.onSelectItemWrapper(gui.handlelineByLineNavigateTo))
+	gui.Views.Main.SetOnSelectItem(gui.onSelectItemWrapper(gui.handlelineByLineNavigateTo))
 
-	mainViewWidth, mainViewHeight := gui.getMainView().Size()
+	mainViewWidth, mainViewHeight := gui.Views.Main.Size()
 	if mainViewWidth != gui.State.PrevMainWidth || mainViewHeight != gui.State.PrevMainHeight {
 		gui.State.PrevMainWidth = mainViewWidth
 		gui.State.PrevMainHeight = mainViewHeight
@@ -337,11 +291,77 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 	return gui.resizeCurrentPopupPanel()
 }
 
-func (gui *Gui) onInitialViewsCreation() error {
+func (gui *Gui) setHiddenView(viewName string) (*gocui.View, error) {
+	// arbitrarily giving the view enough size so that we don't get an error, but
+	// it's expected that the view will be given the correct size before being shown
+	return gui.g.SetView(viewName, 0, 0, 10, 10, 0)
+}
+
+func (gui *Gui) onInitialViewsCreationForRepo() error {
 	gui.setInitialViewContexts()
 
-	// add tabs to views
+	// hide any popup views. This only applies when we've just switched repos
+	for _, viewName := range gui.popupViewNames() {
+		view, err := gui.g.View(viewName)
+		if err == nil {
+			view.Visible = false
+		}
+	}
+
+	initialContext := gui.currentSideContext()
+	if err := gui.pushContext(initialContext); err != nil {
+		return err
+	}
+
+	return gui.loadNewRepo()
+}
+
+func (gui *Gui) onInitialViewsCreation() error {
+	// creating some views which are hidden at the start but we need to exist so that we can set an initial ordering
+	if err := gui.createHiddenViews(); err != nil {
+		return err
+	}
+
+	// now we order the views (in order of bottom first)
+	layerOneViews := []*gocui.View{
+		// first layer. Ordering within this layer does not matter because there are
+		// no overlapping views
+		gui.Views.Status,
+		gui.Views.Files,
+		gui.Views.Branches,
+		gui.Views.Commits,
+		gui.Views.Stash,
+		gui.Views.CommitFiles,
+		gui.Views.Main,
+		gui.Views.Secondary,
+
+		// bottom line
+		gui.Views.Options,
+		gui.Views.AppStatus,
+		gui.Views.Information,
+		gui.Views.Search,
+		gui.Views.SearchPrefix,
+
+		// popups. Ordering within this layer does not matter because there should
+		// only be one popup shown at a time
+		gui.Views.CommitMessage,
+		gui.Views.Credentials,
+		gui.Views.Menu,
+		gui.Views.Suggestions,
+		gui.Views.Confirmation,
+
+		// this guy will cover everything else when it appears
+		gui.Views.Limit,
+	}
+
+	for _, view := range layerOneViews {
+		if _, err := gui.g.SetViewOnTop(view.Name()); err != nil {
+			return err
+		}
+	}
+
 	gui.g.Mutexes.ViewsMutex.Lock()
+	// add tabs to views
 	for _, view := range gui.g.Views() {
 		tabs := gui.viewTabNames(view.Name())
 		if len(tabs) == 0 {
@@ -350,10 +370,6 @@ func (gui *Gui) onInitialViewsCreation() error {
 		view.Tabs = tabs
 	}
 	gui.g.Mutexes.ViewsMutex.Unlock()
-
-	if err := gui.pushContext(gui.defaultSideContext()); err != nil {
-		return err
-	}
 
 	if err := gui.keybindings(); err != nil {
 		return err
@@ -366,5 +382,64 @@ func (gui *Gui) onInitialViewsCreation() error {
 		gui.showRecentRepos = false
 	}
 
-	return gui.loadNewRepo()
+	gui.Updater.CheckForNewUpdate(gui.onBackgroundUpdateCheckFinish, false)
+
+	gui.waitForIntro.Done()
+
+	return nil
+}
+
+func (gui *Gui) createHiddenViews() error {
+	// doesn't matter where this view starts because it will be hidden
+	var err error
+	if gui.Views.CommitMessage, err = gui.setHiddenView("commitMessage"); err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
+		}
+		gui.Views.CommitMessage.Visible = false
+		gui.Views.CommitMessage.Title = gui.Tr.CommitMessage
+		gui.Views.CommitMessage.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.CommitMessage.Editable = true
+		gui.Views.CommitMessage.Editor = gocui.EditorFunc(gui.commitMessageEditor)
+	}
+
+	// doesn't matter where this view starts because it will be hidden
+	if gui.Views.Credentials, err = gui.setHiddenView("credentials"); err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
+		}
+		gui.Views.Credentials.Visible = false
+		gui.Views.Credentials.Title = gui.Tr.CredentialsUsername
+		gui.Views.Credentials.FgColor = theme.GocuiDefaultTextColor
+		gui.Views.Credentials.Editable = true
+	}
+
+	// not worrying about setting attributes because that will be done when the view is actually shown
+	gui.Views.Confirmation, err = gui.setHiddenView("confirmation")
+	if err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
+		}
+		gui.Views.Confirmation.Visible = false
+	}
+
+	// not worrying about setting attributes because that will be done when the view is actually shown
+	gui.Views.Suggestions, err = gui.setHiddenView("suggestions")
+	if err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
+		}
+		gui.Views.Suggestions.Visible = false
+	}
+
+	// not worrying about setting attributes because that will be done when the view is actually shown
+	gui.Views.Menu, err = gui.setHiddenView("menu")
+	if err != nil {
+		if err.Error() != UNKNOWN_VIEW_ERROR_MSG {
+			return err
+		}
+		gui.Views.Menu.Visible = false
+	}
+
+	return nil
 }

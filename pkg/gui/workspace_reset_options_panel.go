@@ -4,10 +4,9 @@ import (
 	"fmt"
 
 	"github.com/fatih/color"
-	"github.com/jesseduffield/gocui"
 )
 
-func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCreateResetMenu() error {
 	red := color.New(color.FgRed)
 
 	nukeStr := "reset --hard HEAD && git clean -fd"
@@ -26,7 +25,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 		{
@@ -39,7 +38,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 		{
@@ -52,7 +51,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 		{
@@ -65,7 +64,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 		{
@@ -78,7 +77,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 		{
@@ -91,7 +90,7 @@ func (gui *Gui) handleCreateResetMenu(g *gocui.Gui, v *gocui.View) error {
 					return gui.surfaceError(err)
 				}
 
-				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES}})
+				return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES}})
 			},
 		},
 	}

@@ -61,43 +61,6 @@ func (f fileInfoMock) Sys() interface{} {
 	return f.sys
 }
 
-// TestVerifyInGitRepo is a function.
-func TestVerifyInGitRepo(t *testing.T) {
-	type scenario struct {
-		testName string
-		runCmd   func(string, ...interface{}) error
-		test     func(error)
-	}
-
-	scenarios := []scenario{
-		{
-			"Valid git repository",
-			func(string, ...interface{}) error {
-				return nil
-			},
-			func(err error) {
-				assert.NoError(t, err)
-			},
-		},
-		{
-			"Not a valid git repository",
-			func(string, ...interface{}) error {
-				return fmt.Errorf("fatal: Not a git repository (or any of the parent directories): .git")
-			},
-			func(err error) {
-				assert.Error(t, err)
-				assert.Regexp(t, `fatal: .ot a git repository \(or any of the parent directories\s?\/?\): \.git`, err.Error())
-			},
-		},
-	}
-
-	for _, s := range scenarios {
-		t.Run(s.testName, func(t *testing.T) {
-			s.test(verifyInGitRepo(s.runCmd))
-		})
-	}
-}
-
 // TestNavigateToRepoRootDirectory is a function.
 func TestNavigateToRepoRootDirectory(t *testing.T) {
 	type scenario struct {
@@ -233,7 +196,7 @@ func TestNewGitCommand(t *testing.T) {
 			},
 			func(gitCmd *GitCommand, err error) {
 				assert.Error(t, err)
-				assert.Regexp(t, `fatal: .ot a git repository ((\(or any of the parent directories\): \.git)|(\(or any parent up to mount point \/\)))`, err.Error())
+				assert.Regexp(t, `Must open lazygit in a git repository`, err.Error())
 			},
 		},
 		{
@@ -344,6 +307,7 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 						HasStagedChanges:        true,
 						HasUnstagedChanges:      true,
 						Tracked:                 true,
+						Added:                   false,
 						Deleted:                 false,
 						HasMergeConflicts:       false,
 						HasInlineMergeConflicts: false,
@@ -356,6 +320,7 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 						HasStagedChanges:        true,
 						HasUnstagedChanges:      false,
 						Tracked:                 false,
+						Added:                   true,
 						Deleted:                 false,
 						HasMergeConflicts:       false,
 						HasInlineMergeConflicts: false,
@@ -368,6 +333,7 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 						HasStagedChanges:        true,
 						HasUnstagedChanges:      true,
 						Tracked:                 false,
+						Added:                   true,
 						Deleted:                 false,
 						HasMergeConflicts:       false,
 						HasInlineMergeConflicts: false,
@@ -380,6 +346,7 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 						HasStagedChanges:        false,
 						HasUnstagedChanges:      true,
 						Tracked:                 false,
+						Added:                   true,
 						Deleted:                 false,
 						HasMergeConflicts:       false,
 						HasInlineMergeConflicts: false,
@@ -392,6 +359,7 @@ func TestGitCommandGetStatusFiles(t *testing.T) {
 						HasStagedChanges:        false,
 						HasUnstagedChanges:      true,
 						Tracked:                 true,
+						Added:                   false,
 						Deleted:                 false,
 						HasMergeConflicts:       true,
 						HasInlineMergeConflicts: true,
@@ -454,87 +422,6 @@ func TestGitCommandCommitAmend(t *testing.T) {
 
 	_, err := gitCmd.PrepareCommitAmendSubProcess().CombinedOutput()
 	assert.NoError(t, err)
-}
-
-// TestGitCommandMergeStatusFiles is a function.
-func TestGitCommandMergeStatusFiles(t *testing.T) {
-	type scenario struct {
-		testName string
-		oldFiles []*models.File
-		newFiles []*models.File
-		test     func([]*models.File)
-	}
-
-	scenarios := []scenario{
-		{
-			"Old file and new file are the same",
-			[]*models.File{},
-			[]*models.File{
-				{
-					Name: "new_file.txt",
-				},
-			},
-			func(files []*models.File) {
-				expected := []*models.File{
-					{
-						Name: "new_file.txt",
-					},
-				}
-
-				assert.Len(t, files, 1)
-				assert.EqualValues(t, expected, files)
-			},
-		},
-		{
-			"Several files to merge, with some identical",
-			[]*models.File{
-				{
-					Name: "new_file1.txt",
-				},
-				{
-					Name: "new_file2.txt",
-				},
-				{
-					Name: "new_file3.txt",
-				},
-			},
-			[]*models.File{
-				{
-					Name: "new_file4.txt",
-				},
-				{
-					Name: "new_file5.txt",
-				},
-				{
-					Name: "new_file1.txt",
-				},
-			},
-			func(files []*models.File) {
-				expected := []*models.File{
-					{
-						Name: "new_file1.txt",
-					},
-					{
-						Name: "new_file4.txt",
-					},
-					{
-						Name: "new_file5.txt",
-					},
-				}
-
-				assert.Len(t, files, 3)
-				assert.EqualValues(t, expected, files)
-			},
-		},
-	}
-
-	for _, s := range scenarios {
-		t.Run(s.testName, func(t *testing.T) {
-			gitCmd := NewDummyGitCommand()
-
-			s.test(gitCmd.MergeStatusFiles(s.oldFiles, s.newFiles, nil))
-		})
-	}
 }
 
 // TestGitCommandGetCommitDifferences is a function.
@@ -600,7 +487,7 @@ func TestGitCommandRenameCommit(t *testing.T) {
 	gitCmd := NewDummyGitCommand()
 	gitCmd.OSCommand.Command = func(cmd string, args ...string) *exec.Cmd {
 		assert.EqualValues(t, "git", cmd)
-		assert.EqualValues(t, []string{"commit", "--allow-empty", "--amend", "-m", "test"}, args)
+		assert.EqualValues(t, []string{"commit", "--allow-empty", "--amend", "--only", "-m", "test"}, args)
 
 		return secureexec.Command("echo")
 	}
@@ -1051,7 +938,7 @@ func TestGitCommandUnstageFile(t *testing.T) {
 		testName string
 		command  func(string, ...string) *exec.Cmd
 		test     func(error)
-		tracked  bool
+		reset    bool
 	}
 
 	scenarios := []scenario{
@@ -1087,12 +974,15 @@ func TestGitCommandUnstageFile(t *testing.T) {
 		t.Run(s.testName, func(t *testing.T) {
 			gitCmd := NewDummyGitCommand()
 			gitCmd.OSCommand.Command = s.command
-			s.test(gitCmd.UnStageFile("test.txt", s.tracked))
+			s.test(gitCmd.UnStageFile([]string{"test.txt"}, s.reset))
 		})
 	}
 }
 
 // TestGitCommandDiscardAllFileChanges is a function.
+// these tests don't cover everything, in part because we already have an integration
+// test which does cover everything. I don't want to unnecessarily assert on the 'how'
+// when the 'what' is what matters
 func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 	type scenario struct {
 		testName   string
@@ -1146,6 +1036,7 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 			&models.File{
 				Name:    "test",
 				Tracked: false,
+				Added:   true,
 			},
 			func(string) error {
 				return fmt.Errorf("an error occurred when removing file")
@@ -1277,6 +1168,7 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 			&models.File{
 				Name:             "test",
 				Tracked:          false,
+				Added:            true,
 				HasStagedChanges: true,
 			},
 			func(filename string) error {
@@ -1301,6 +1193,7 @@ func TestGitCommandDiscardAllFileChanges(t *testing.T) {
 			&models.File{
 				Name:             "test",
 				Tracked:          false,
+				Added:            true,
 				HasStagedChanges: false,
 			},
 			func(filename string) error {
@@ -2120,7 +2013,7 @@ func TestEditFile(t *testing.T) {
 				return "", nil
 			},
 			func(cmd *exec.Cmd, err error) {
-				assert.EqualError(t, err, "No editor defined in $VISUAL, $EDITOR, or git config")
+				assert.EqualError(t, err, "No editor defined in $GIT_EDITOR, $VISUAL, $EDITOR, or git config")
 			},
 		},
 		{

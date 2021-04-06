@@ -34,6 +34,7 @@ Default path for the config file:
     mouseEvents: true
     skipUnstageLineWarning: false
     skipStashWarning: true
+    showFileTree: false # for rendering changes files in a tree format
   git:
     paging:
       colorArg: always
@@ -60,7 +61,7 @@ Default path for the config file:
   reporting: 'undetermined' # one of: 'on' | 'off' | 'undetermined'
   confirmOnQuit: false
   # determines whether hitting 'esc' will quit the application when there is nothing to cancel/close
-  quitOnTopLevelReturn: true
+  quitOnTopLevelReturn: false
   disableStartupPopups: false
   notARepository: 'prompt' # one of: 'prompt' | 'create' | 'skip'
   keybinding:
@@ -133,6 +134,7 @@ Default path for the config file:
       toggleStagedAll: 'a' # stage/unstage all
       viewResetOptions: 'D'
       fetch: 'f'
+      toggleTreeView: '`'
     branches:
       createPullRequest: 'o'
       checkoutBranchByName: 'c'
@@ -248,7 +250,7 @@ If you have issues with a light terminal theme where you can't read / see the te
 
 ## Struggling to see selected line
 
-If you struggle to see the selected line I recomment using the reverse attribute on selected lines like so:
+If you struggle to see the selected line I recommend using the reverse attribute on selected lines like so:
 
 ```yaml
   gui:
@@ -258,6 +260,24 @@ If you struggle to see the selected line I recomment using the reverse attribute
       selectedRangeBgColor:
         - reverse
 ```
+
+The following has also worked for a couple of people:
+```yaml
+gui:
+  theme:
+    activeBorderColor:
+      - white
+      - bold
+    inactiveBorderColor:
+      - white
+    selectedLineBgColor:
+      - reverse
+      - blue
+```
+
+Alternatively you may have bold fonts disabled in your terminal, in which case enabling bold fonts should solve the problem.
+
+If you're still having trouble please raise an issue.
 
 ## Example Coloring
 

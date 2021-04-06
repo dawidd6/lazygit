@@ -1,7 +1,6 @@
 package gui
 
 import (
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
 	"github.com/jesseduffield/lazygit/pkg/utils"
@@ -17,15 +16,17 @@ import (
 // the reflog will read UUCBA, and when I read the first two undos, I know to skip the following
 // two user actions, meaning we end up undoing reflog entry C. Redoing works in a similar way.
 
+type ReflogActionKind int
+
 const (
-	CHECKOUT = iota
+	CHECKOUT ReflogActionKind = iota
 	COMMIT
 	REBASE
 	CURRENT_REBASE
 )
 
 type reflogAction struct {
-	kind int // one of CHECKOUT, REBASE, and COMMIT
+	kind ReflogActionKind
 	from string
 	to   string
 }
@@ -84,7 +85,7 @@ func (gui *Gui) parseReflogForActions(onUserAction func(counter int, action refl
 	return nil
 }
 
-func (gui *Gui) reflogUndo(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) reflogUndo() error {
 	undoEnvVars := []string{"GIT_REFLOG_ACTION=[lazygit undo]"}
 	undoingStatus := gui.Tr.UndoingStatus
 
@@ -115,7 +116,7 @@ func (gui *Gui) reflogUndo(g *gocui.Gui, v *gocui.View) error {
 	})
 }
 
-func (gui *Gui) reflogRedo(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) reflogRedo() error {
 	redoEnvVars := []string{"GIT_REFLOG_ACTION=[lazygit redo]"}
 	redoingStatus := gui.Tr.RedoingStatus
 

@@ -11,23 +11,19 @@ import (
 
 // runSyncOrAsyncCommand takes the output of a command that may have returned
 // either no error, an error, or a subprocess to execute, and if a subprocess
-// needs to be set on the gui object, it does so, and then returns the error
-// the bool returned tells us whether the calling code should continue
+// needs to be run, it runs it
 func (gui *Gui) runSyncOrAsyncCommand(sub *exec.Cmd, err error) (bool, error) {
 	if err != nil {
-		if err != gui.Errors.ErrSubProcess {
-			return false, gui.surfaceError(err)
-		}
+		return false, gui.surfaceError(err)
 	}
 	if sub != nil {
-		gui.SubProcess = sub
-		return false, gui.Errors.ErrSubProcess
+		return false, gui.runSubprocessWithSuspense(sub)
 	}
 	return true, nil
 }
 
-func (gui *Gui) handleCommitConfirm(g *gocui.Gui, v *gocui.View) error {
-	message := gui.trimmedContent(v)
+func (gui *Gui) handleCommitConfirm() error {
+	message := gui.trimmedContent(gui.Views.CommitMessage)
 	if message == "" {
 		return gui.createErrorPanel(gui.Tr.CommitWithoutMessageErr)
 	}
@@ -44,12 +40,12 @@ func (gui *Gui) handleCommitConfirm(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	}
 
-	gui.clearEditorView(v)
+	gui.clearEditorView(gui.Views.CommitMessage)
 	_ = gui.returnFromContext()
 	return gui.refreshSidePanels(refreshOptions{mode: ASYNC})
 }
 
-func (gui *Gui) handleCommitClose(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCommitClose() error {
 	return gui.returnFromContext()
 }
 
@@ -63,7 +59,7 @@ func (gui *Gui) handleCommitMessageFocused() error {
 		},
 	)
 
-	gui.renderString("options", message)
+	gui.renderString(gui.Views.Options, message)
 	return nil
 }
 
@@ -76,6 +72,6 @@ func (gui *Gui) RenderCommitLength() {
 	if !gui.Config.GetUserConfig().Gui.CommitLength.Show {
 		return
 	}
-	v := gui.getCommitMessageView()
-	v.Subtitle = gui.getBufferLength(v)
+
+	gui.Views.CommitMessage.Subtitle = gui.getBufferLength(gui.Views.CommitMessage)
 }

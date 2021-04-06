@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
@@ -25,7 +24,7 @@ func (gui *Gui) handleSubmoduleSelect() error {
 	var task updateTask
 	submodule := gui.getSelectedSubmodule()
 	if submodule == nil {
-		task = gui.createRenderStringTask("No submodules")
+		task = NewRenderStringTask("No submodules")
 	} else {
 		prefix := fmt.Sprintf(
 			"Name: %s\nPath: %s\nUrl:  %s\n\n",
@@ -36,11 +35,11 @@ func (gui *Gui) handleSubmoduleSelect() error {
 
 		file := gui.fileForSubmodule(submodule)
 		if file == nil {
-			task = gui.createRenderStringTask(prefix)
+			task = NewRenderStringTask(prefix)
 		} else {
 			cmdStr := gui.GitCommand.WorktreeFileDiffCmdStr(file, false, !file.HasUnstagedChanges && file.HasStagedChanges)
 			cmd := gui.OSCommand.ExecutableFromString(cmdStr)
-			task = gui.createRunCommandTaskWithPrefix(cmd, prefix)
+			task = NewRunCommandTaskWithPrefix(cmd, prefix)
 		}
 	}
 
@@ -72,9 +71,9 @@ func (gui *Gui) enterSubmodule(submodule *models.SubmoduleConfig) error {
 	if err != nil {
 		return err
 	}
-	gui.State.RepoPathStack = append(gui.State.RepoPathStack, wd)
+	gui.RepoPathStack = append(gui.RepoPathStack, wd)
 
-	return gui.dispatchSwitchToRepo(submodule.Path)
+	return gui.dispatchSwitchToRepo(submodule.Path, true)
 }
 
 func (gui *Gui) removeSubmodule(submodule *models.SubmoduleConfig) error {
@@ -86,7 +85,7 @@ func (gui *Gui) removeSubmodule(submodule *models.SubmoduleConfig) error {
 				return gui.surfaceError(err)
 			}
 
-			return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES, FILES}})
+			return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES, FILES}})
 		},
 	})
 }
@@ -98,7 +97,7 @@ func (gui *Gui) handleResetSubmodule(submodule *models.SubmoduleConfig) error {
 }
 
 func (gui *Gui) fileForSubmodule(submodule *models.SubmoduleConfig) *models.File {
-	for _, file := range gui.State.Files {
+	for _, file := range gui.State.FileManager.GetAllFiles() {
 		if file.IsSubmodule([]*models.SubmoduleConfig{submodule}) {
 			return file
 		}
@@ -110,7 +109,7 @@ func (gui *Gui) fileForSubmodule(submodule *models.SubmoduleConfig) *models.File
 func (gui *Gui) resetSubmodule(submodule *models.SubmoduleConfig) error {
 	file := gui.fileForSubmodule(submodule)
 	if file != nil {
-		if err := gui.GitCommand.UnStageFile(file.Name, file.Tracked); err != nil {
+		if err := gui.GitCommand.UnStageFile(file.Names(), file.Tracked); err != nil {
 			return gui.surfaceError(err)
 		}
 	}
@@ -122,7 +121,7 @@ func (gui *Gui) resetSubmodule(submodule *models.SubmoduleConfig) error {
 		return gui.surfaceError(err)
 	}
 
-	return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []int{FILES, SUBMODULES}})
+	return gui.refreshSidePanels(refreshOptions{mode: ASYNC, scope: []RefreshableView{FILES, SUBMODULES}})
 }
 
 func (gui *Gui) handleAddSubmodule() error {
@@ -144,7 +143,7 @@ func (gui *Gui) handleAddSubmodule() error {
 								err := gui.GitCommand.SubmoduleAdd(submoduleName, submodulePath, submoduleUrl)
 								gui.handleCredentialsPopup(err)
 
-								return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+								return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 							})
 						},
 					})
@@ -164,7 +163,7 @@ func (gui *Gui) handleEditSubmoduleUrl(submodule *models.SubmoduleConfig) error 
 				err := gui.GitCommand.SubmoduleUpdateUrl(submodule.Name, submodule.Path, newUrl)
 				gui.handleCredentialsPopup(err)
 
-				return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+				return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 			})
 		},
 	})
@@ -175,21 +174,19 @@ func (gui *Gui) handleSubmoduleInit(submodule *models.SubmoduleConfig) error {
 		err := gui.GitCommand.SubmoduleInit(submodule.Path)
 		gui.handleCredentialsPopup(err)
 
-		return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+		return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 	})
 }
 
-func (gui *Gui) forSubmodule(callback func(*models.SubmoduleConfig) error) func(g *gocui.Gui, v *gocui.View) error {
-	return gui.wrappedHandler(
-		func() error {
-			submodule := gui.getSelectedSubmodule()
-			if submodule == nil {
-				return nil
-			}
+func (gui *Gui) forSubmodule(callback func(*models.SubmoduleConfig) error) func() error {
+	return func() error {
+		submodule := gui.getSelectedSubmodule()
+		if submodule == nil {
+			return nil
+		}
 
-			return callback(submodule)
-		},
-	)
+		return callback(submodule)
+	}
 }
 
 func (gui *Gui) handleResetRemoveSubmodule(submodule *models.SubmoduleConfig) error {
@@ -221,7 +218,7 @@ func (gui *Gui) handleBulkSubmoduleActionsMenu() error {
 						return gui.surfaceError(err)
 					}
 
-					return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+					return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 				})
 			},
 		},
@@ -233,7 +230,7 @@ func (gui *Gui) handleBulkSubmoduleActionsMenu() error {
 						return gui.surfaceError(err)
 					}
 
-					return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+					return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 				})
 			},
 		},
@@ -245,7 +242,7 @@ func (gui *Gui) handleBulkSubmoduleActionsMenu() error {
 						return gui.surfaceError(err)
 					}
 
-					return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+					return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 				})
 			},
 		},
@@ -257,7 +254,7 @@ func (gui *Gui) handleBulkSubmoduleActionsMenu() error {
 						return gui.surfaceError(err)
 					}
 
-					return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+					return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 				})
 			},
 		},
@@ -271,6 +268,6 @@ func (gui *Gui) handleUpdateSubmodule(submodule *models.SubmoduleConfig) error {
 		err := gui.GitCommand.SubmoduleUpdate(submodule.Path)
 		gui.handleCredentialsPopup(err)
 
-		return gui.refreshSidePanels(refreshOptions{scope: []int{SUBMODULES}})
+		return gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{SUBMODULES}})
 	})
 }

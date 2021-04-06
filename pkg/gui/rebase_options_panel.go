@@ -50,8 +50,7 @@ func (gui *Gui) genericMergeCommand(command string) error {
 	if status == commands.REBASE_MODE_MERGING && command != "abort" && gui.Config.GetUserConfig().Git.Merging.ManualCommit {
 		sub := gui.OSCommand.PrepareSubProcess("git", commandType, fmt.Sprintf("--%s", command))
 		if sub != nil {
-			gui.SubProcess = sub
-			return gui.Errors.ErrSubProcess
+			return gui.runSubprocessWithSuspense(sub)
 		}
 		return nil
 	}
@@ -68,8 +67,6 @@ func (gui *Gui) handleGenericMergeCommandResult(result error) error {
 	}
 	if result == nil {
 		return nil
-	} else if result == gui.Errors.ErrSubProcess {
-		return result
 	} else if strings.Contains(result.Error(), "No changes - did you forget to use") {
 		return gui.genericMergeCommand("skip")
 	} else if strings.Contains(result.Error(), "The previous cherry-pick is now empty") {
@@ -83,7 +80,7 @@ func (gui *Gui) handleGenericMergeCommandResult(result error) error {
 			prompt:              gui.Tr.FoundConflicts,
 			handlersManageFocus: true,
 			handleConfirm: func() error {
-				return gui.pushContext(gui.Contexts.Files.Context)
+				return gui.pushContext(gui.State.Contexts.Files)
 			},
 			handleClose: func() error {
 				if err := gui.returnFromContext(); err != nil {

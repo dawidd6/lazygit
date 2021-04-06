@@ -110,6 +110,7 @@
   <kbd>e</kbd>: verander bestand
   <kbd>space</kbd>: toggle bestand inbegrepen in patch
   <kbd>enter</kbd>: enter bestand to add selecteered lines to the patch
+  <kbd>`</kbd>: toggle file tree view
 </pre>
 
 ## Commits Paneel (Commits)
@@ -174,6 +175,7 @@
   <kbd>f</kbd>: fetch
   <kbd>ctrl+o</kbd>: kopieer de bestandsnaam naar het klembord
   <kbd>g</kbd>: bekijk upstream reset opties
+  <kbd>`</kbd>: toggle file tree view
 </pre>
 
 ## Bestanden Paneel (Submodules)
@@ -205,8 +207,8 @@
 ## Hooft Paneel (Normaal)
 
 <pre>
-  <kbd>￣</kbd>: scroll omlaag (fn+up)
-  <kbd>￤</kbd>: scroll omhoog (fn+down)
+  <kbd>Ő</kbd>: scroll omlaag (fn+up)
+  <kbd>ő</kbd>: scroll omhoog (fn+down)
 </pre>
 
 ## Hooft Paneel (Patch Bouwen)

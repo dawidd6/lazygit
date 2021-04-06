@@ -42,8 +42,7 @@ func (gui *Gui) getMenuOptions() map[string]string {
 	}
 }
 
-func (gui *Gui) handleMenuClose(g *gocui.Gui, v *gocui.View) error {
-	_ = g.DeleteView("menu")
+func (gui *Gui) handleMenuClose() error {
 	return gui.returnFromContext()
 }
 
@@ -88,7 +87,7 @@ func (gui *Gui) createMenu(title string, items []*menuItem, createMenuOptions cr
 	gui.State.Panels.Menu.SelectedLineIdx = 0
 
 	gui.g.Update(func(g *gocui.Gui) error {
-		return gui.pushContext(gui.Contexts.Menu.Context)
+		return gui.pushContext(gui.State.Contexts.Menu)
 	})
 	return nil
 }

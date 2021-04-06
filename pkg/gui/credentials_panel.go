@@ -13,7 +13,7 @@ type credentials chan string
 func (gui *Gui) promptUserForCredential(passOrUname string) string {
 	gui.credentials = make(chan string)
 	gui.g.Update(func(g *gocui.Gui) error {
-		credentialsView, _ := g.View("credentials")
+		credentialsView := gui.Views.Credentials
 		switch passOrUname {
 		case "username":
 			credentialsView.Title = gui.Tr.CredentialsUsername
@@ -26,7 +26,7 @@ func (gui *Gui) promptUserForCredential(passOrUname string) string {
 			credentialsView.Mask = '*'
 		}
 
-		if err := gui.pushContext(gui.Contexts.Credentials.Context); err != nil {
+		if err := gui.pushContext(gui.State.Contexts.Credentials); err != nil {
 			return err
 		}
 
@@ -39,10 +39,11 @@ func (gui *Gui) promptUserForCredential(passOrUname string) string {
 	return userInput + "\n"
 }
 
-func (gui *Gui) handleSubmitCredential(g *gocui.Gui, v *gocui.View) error {
-	message := gui.trimmedContent(v)
+func (gui *Gui) handleSubmitCredential() error {
+	credentialsView := gui.Views.Credentials
+	message := gui.trimmedContent(credentialsView)
 	gui.credentials <- message
-	gui.clearEditorView(v)
+	gui.clearEditorView(credentialsView)
 	if err := gui.returnFromContext(); err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func (gui *Gui) handleSubmitCredential(g *gocui.Gui, v *gocui.View) error {
 	return gui.refreshSidePanels(refreshOptions{})
 }
 
-func (gui *Gui) handleCloseCredentialsView(g *gocui.Gui, v *gocui.View) error {
+func (gui *Gui) handleCloseCredentialsView() error {
 	gui.credentials <- ""
 	return gui.returnFromContext()
 }
@@ -66,7 +67,7 @@ func (gui *Gui) handleCredentialsViewFocused() error {
 		},
 	)
 
-	gui.renderString("options", message)
+	gui.renderString(gui.Views.Options, message)
 	return nil
 }
 

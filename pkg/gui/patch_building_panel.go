@@ -22,25 +22,23 @@ func (gui *Gui) refreshPatchBuildingPanel(selectedLineIdx int, state *lBlPanelSt
 		return gui.handleEscapePatchBuildingPanel()
 	}
 
-	gui.splitMainPanel(true)
-
-	gui.getMainView().Title = "Patch"
-	gui.getSecondaryView().Title = "Custom Patch"
+	gui.Views.Main.Title = "Patch"
+	gui.Views.Secondary.Title = "Custom Patch"
 
 	// get diff from commit file that's currently selected
-	commitFile := gui.getSelectedCommitFile()
-	if commitFile == nil {
+	node := gui.getSelectedCommitFileNode()
+	if node == nil {
 		return nil
 	}
 
-	to := commitFile.Parent
+	to := gui.State.CommitFileManager.GetParent()
 	from, reverse := gui.getFromAndReverseArgsForDiff(to)
-	diff, err := gui.GitCommand.ShowFileDiff(from, to, reverse, commitFile.Name, true)
+	diff, err := gui.GitCommand.ShowFileDiff(from, to, reverse, node.GetPath(), true)
 	if err != nil {
 		return err
 	}
 
-	secondaryDiff := gui.GitCommand.PatchManager.RenderPatchForFile(commitFile.Name, true, false, true)
+	secondaryDiff := gui.GitCommand.PatchManager.RenderPatchForFile(node.GetPath(), true, false, true)
 	if err != nil {
 		return err
 	}
@@ -78,12 +76,12 @@ func (gui *Gui) handleToggleSelectionForPatch() error {
 		}
 
 		// add range of lines to those set for the file
-		commitFile := gui.getSelectedCommitFile()
-		if commitFile == nil {
+		node := gui.getSelectedCommitFileNode()
+		if node == nil {
 			return nil
 		}
 
-		if err := toggleFunc(commitFile.Name, state.FirstLineIdx, state.LastLineIdx); err != nil {
+		if err := toggleFunc(node.GetPath(), state.FirstLineIdx, state.LastLineIdx); err != nil {
 			// might actually want to return an error here
 			gui.Log.Error(err)
 		}
@@ -109,8 +107,8 @@ func (gui *Gui) handleEscapePatchBuildingPanel() error {
 		gui.GitCommand.PatchManager.Reset()
 	}
 
-	if gui.currentContext().GetKey() == gui.Contexts.PatchBuilding.Context.GetKey() {
-		return gui.pushContext(gui.Contexts.CommitFiles.Context)
+	if gui.currentContext().GetKey() == gui.State.Contexts.PatchBuilding.GetKey() {
+		return gui.pushContext(gui.State.Contexts.CommitFiles)
 	} else {
 		// need to re-focus in case the secondary view should now be hidden
 		return gui.currentContext().HandleFocus()
@@ -125,7 +123,7 @@ func (gui *Gui) secondaryPatchPanelUpdateOpts() *viewUpdateOpts {
 			title:     "Custom Patch",
 			noWrap:    true,
 			highlight: true,
-			task:      gui.createRenderStringWithoutScrollTask(patch),
+			task:      NewRenderStringWithoutScrollTask(patch),
 		}
 	}
 

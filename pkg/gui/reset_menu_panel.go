@@ -17,11 +17,11 @@ func (gui *Gui) resetToRef(ref string, strength string, options oscommands.RunCo
 	// loading a heap of commits is slow so we limit them whenever doing a reset
 	gui.State.Panels.Commits.LimitCommits = true
 
-	if err := gui.pushContext(gui.Contexts.BranchCommits.Context); err != nil {
+	if err := gui.pushContext(gui.State.Contexts.BranchCommits); err != nil {
 		return err
 	}
 
-	if err := gui.refreshSidePanels(refreshOptions{scope: []int{FILES, BRANCHES, REFLOG, COMMITS}}); err != nil {
+	if err := gui.refreshSidePanels(refreshOptions{scope: []RefreshableView{FILES, BRANCHES, REFLOG, COMMITS}}); err != nil {
 		return err
 	}
 

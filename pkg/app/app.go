@@ -97,6 +97,7 @@ func newLogger(config config.AppConfigurer) *logrus.Entry {
 
 // NewApp bootstrap a new application
 func NewApp(config config.AppConfigurer, filterPath string) (*App, error) {
+
 	app := &App{
 		closers: []io.Closer{},
 		Config:  config,
@@ -182,7 +183,7 @@ func (app *App) setupRepo() (bool, error) {
 	}
 
 	// if we are not in a git repo, we ask if we want to `git init`
-	if err := app.OSCommand.RunCommand("git status"); err != nil {
+	if err := commands.VerifyInGitRepo(app.OSCommand); err != nil {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return false, err
@@ -225,6 +226,7 @@ func (app *App) setupRepo() (bool, error) {
 			return false, err
 		}
 	}
+
 	return false, nil
 }
 
@@ -237,7 +239,7 @@ func (app *App) Run() error {
 		os.Exit(0)
 	}
 
-	err := app.Gui.RunWithSubprocesses()
+	err := app.Gui.RunAndHandleError()
 	return err
 }
 

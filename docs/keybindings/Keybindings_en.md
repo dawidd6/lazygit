@@ -16,7 +16,7 @@
   <kbd>+</kbd>: next screen mode (normal/half/fullscreen)
   <kbd>_</kbd>: prev screen mode
   <kbd>:</kbd>: execute custom command
-  <kbd>|</kbd>: view scoping options
+  <kbd>|</kbd>: view filter-by-path options
   <kbd>W</kbd>: open diff menu
   <kbd>ctrl+e</kbd>: open diff menu
 </pre>
@@ -109,7 +109,8 @@
   <kbd>o</kbd>: open file
   <kbd>e</kbd>: edit file
   <kbd>space</kbd>: toggle file included in patch
-  <kbd>enter</kbd>: enter file to add selected lines to the patch
+  <kbd>enter</kbd>: enter file to add selected lines to the patch (or toggle directory collapsed)
+  <kbd>`</kbd>: toggle file tree view
 </pre>
 
 ## Commits Panel (Commits)
@@ -170,10 +171,11 @@
   <kbd>S</kbd>: view stash options
   <kbd>a</kbd>: stage/unstage all
   <kbd>D</kbd>: view reset options
-  <kbd>enter</kbd>: stage individual hunks/lines
+  <kbd>enter</kbd>: stage individual hunks/lines for file, or collapse/expand for directory
   <kbd>f</kbd>: fetch
   <kbd>ctrl+o</kbd>: copy the file name to the clipboard
   <kbd>g</kbd>: view upstream reset options
+  <kbd>`</kbd>: toggle file tree view
 </pre>
 
 ## Files Panel (Submodules)
@@ -205,8 +207,8 @@
 ## Main Panel (Normal)
 
 <pre>
-  <kbd>￣</kbd>: scroll down (fn+up)
-  <kbd>￤</kbd>: scroll up (fn+down)
+  <kbd>Ő</kbd>: scroll down (fn+up)
+  <kbd>ő</kbd>: scroll up (fn+down)
 </pre>
 
 ## Main Panel (Patch Building)
