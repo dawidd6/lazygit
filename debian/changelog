@@ -1,3 +1,215 @@
+lazygit (0.27-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * better handling of discarding files
+
+  [ Francisco Miamoto ]
+  * fix panic for unprintable key presses
+
+  [ Jesse Duffield ]
+  * defend against race condition in editors
+  * WIP
+  * better tree formatting
+  * more improvements
+  * showing changes for directories
+  * combining nodes when only one child exists
+  * fix spacing
+  * support toggling collapsed
+  * fix bug for combining directories with single child
+  * update wording
+  * support discarding changes in dir
+  * support some more things
+  * allow ignoring directories
+  * more file tree improvements
+  * allow toggling on/off file tree mode
+  * better handling of refreshed files
+  * handle nothing selected
+  * better handling of cursor relocation
+  * more functional approach
+  * safer code
+  * bring merge conflicts to top
+  * drop Name field from status line node
+  * allow configuring to show file tree on startup
+  * small thing
+  * rename some things
+  * refactor
+  * better way to check if a node is a leaf
+  * fix comment
+  * update cheatsheets
+  * fix spec
+  * fix spec
+  * fix spec
+  * remove collapsed field
+  * small fixes
+  * rename
+  * small refactor
+  * refactor
+  * make fields private
+  * rename function
+  * prevent staging directory containing files with inline merge conflicts
+  * refactor
+  * fix background colour on selected line
+  * expand to path when switching to tree mode
+  * same for renames
+  * refactor
+  * faster startup
+  * shell out custom commands
+  * support GIT_EDITOR
+  * Update Config.md
+  * Update Config.md
+  * Update README.md
+  * refactor to support commit file tree
+  * file tree for commit files
+  * refactor
+  * do not show commit files of another parent as added to the patch
+  * better colouring for directories for when adding a patch
+  * disallow editing commit file directory
+  * allow toggling tree view for commit files panel
+  * refactor to no longer call these things file changes
+  * big refactor to give our enums actual types
+  * refactor
+  * hide commit files view upon losing focus because you probably don't want it lingering anyway
+  * remove dead code
+  * fix bug caused by interface
+  * fix name
+  * add mutex to prevent crashes with merge conflicts
+  * refactor
+  * better handling of scrolling for conflicted files
+  * do not jump cursor around when fixing merge conflicts
+  * more thorough merge conflict integration test
+  * add integration UI to make the integration process easier
+  * add merge conflict undo integration test
+  * safer code
+  * another integration test
+  * linting
+  * fix merge conflict cat issue on windows
+  * use tcell via porting over code from awesome-gocui
+  * stop referencing termbox
+  * no more termbox
+  * bump gocui
+  * bum pgocui
+  * go mod tidy
+  * use true output mode
+  * get tcell to cleanup the terminal if we panic
+  * support backtab key
+  * remove 24 bit color delta arg from docs
+  * bump gocui
+  * bump gocui again
+  * prioritise keybindings on editors
+  * bump gocui
+  * allow scrolling when staging lines or building patch
+  * fix commit message panel
+  * support alt-enter for inserting newline when typing commit message within the app
+  * better scroll support
+  * get rid of these positively ghastly method signatures
+  * fix panic
+  * reset origin when clicking new item
+  * fix bug where we had two sets of contexts with their own state
+  * fix bug where you couldn't change tabs
+  * fix comment
+  * use suspense rather than close the gui when switching to a subprocess
+  * more efficient gocui
+  * refactor of contexts and filtering
+  * switching repos without restarting the gui
+  * refresh main panel when switching between tree and flat mode
+  * refactor to get view tab context map into gui state
+  * refactor
+  * remove sentinel errors
+  * WIP
+  * WIP
+  * WIP
+  * WIP
+  * test
+  * fix some things up
+  * more refactoring
+  * small refactor
+  * fix bug where searching through view got stuck if you went over the upper bound
+  * more refactoring
+  * move recording code into gocui
+  * minor refactor
+  * remove mutex lock that caused deadlock
+  * working on integration tests working again
+  * support tcell simulation screen
+  * update branch autocomplete integration test
+  * update discard file changes test
+  * no need for debug flag because it writes to a different log anyway
+  * update merge conflict undo test
+  * update merge conflict test
+  * update patch building test
+  * update patch building 2 test
+  * update patch building with filetree test
+  * update searching tests
+  * update squash integration test
+  * make it more likely for CI to work
+  * fix lint issues
+  * try this
+  * more lint fixes
+  * maybe this will fix CI
+  * how about using pty
+  * show branches context when starting in filtering mode
+  * see how CI goes running these tests in parallel
+  * Revert "see how CI goes running these tests in parallel"
+  * only re-use repo state when jumping in and out of submodules
+  * remove code that I'm pretty sure isn't needed
+  * update comment
+  * ignore clicks on invisible views
+  * bump gocui
+  * fix issue when switching repos while files refresh
+  * remove caching of styles in gocui
+  * minor cleanup of integration code
+  * prevent git from prompting user if program is run directly
+  * allow playing and updating snapshots
+  * speed up test
+  * add retry logic for running git commands to avoid index.lock problems
+  * retry flakey tests
+  * try better logging for CI
+  * remove time limit
+  * fix windows compilation issue
+  * allow decimal replay speeds for integration tests
+  * tiny refactor
+  * much cleaner integration test code
+  * default to not quitting when hitting esc at the top level.
+  * support passing extra command args in integration tests
+  * add filter path test
+  * change order of filtering and patch building so that esc key exits patch building mode first
+  * add comment
+  * change language
+  * update keybindings
+  * show error when user attempts to commit when no files are present
+  * do not double-append contexts to the stack
+  * allow opening filter menu panel when other popup is open
+  * allow opening diff menu panel when other popup is open
+  * marginally better logic for searching
+  * add another filter path test
+  * another filter path test
+  * fix bug with tags panel
+  * update snapshots to include tags comparison
+  * more tests
+  * move suggestions view behind confirmation view
+  * prevent deadlocks.
+  * add tests for diffing
+  * do not refresh patch panel unless commit files panel is the current side panel
+  * update test descriptions
+  * even slower retries for CI
+  * more tests
+  * more tests
+  * branch rename test
+  * stop checking out branches when doing a rename. Instead just move the cursor to the new position
+  * ensure we're passing the right testing struct pointer around
+  * more tests for branches
+  * remove junk test
+  * reduce chance of deadlock by using a RW mutex on the context stack
+  * hide patch panel if we're in the commits panel and we refresh and it's now exited
+  * fix flicker issue in main view
+  * restore contents on resume from subprocess
+  * prevent adding staged files when renaming top commit
+  * amend reword test
+  * skip some tests that are failing on CI for some reason
+  * don't kill the index.lock file until I decide whether it's actually a good idea
+  * add 0.27 release notes
+
+ --  <runner@fv-az245-297.srxiiy520sferlexzptg5ujtab.xx.internal.cloudapp.net>  Tue, 06 Apr 2021 09:37:42 +0000
+
 lazygit (0.26.1-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
