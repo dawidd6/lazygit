@@ -1,3 +1,16 @@
+lazygit (0.27.2-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * close commit message panel after returning from subprocess
+  * add test for building tree
+  * support file tree mode on windows
+  * revert no-flicker due to carriage return weirdness
+  * fix crash at start
+  * stricter CI
+  * potentially fix credentials issue
+
+ --  <runner@fv-az182-10.kpv2ykgsuhvefc1n22p3dadnrd.bx.internal.cloudapp.net>  Thu, 08 Apr 2021 14:42:30 +0000
+
 lazygit (0.27.1-1) xenial; urgency=medium
 
   [ Emiliano Ruiz Carletti ]
