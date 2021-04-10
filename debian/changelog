@@ -1,3 +1,12 @@
+lazygit (0.27.3-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * reduce flicker without worrying about carriage returns
+  * fix commit amend
+  * pause background threads when running subprocess
+
+ --  <runner@fv-az231-641.akiswcsosdhufpxix5ochsriva.xx.internal.cloudapp.net>  Sat, 10 Apr 2021 02:18:40 +0000
+
 lazygit (0.27.2-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
