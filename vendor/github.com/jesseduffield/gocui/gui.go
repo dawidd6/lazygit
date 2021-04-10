@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/go-errors/errors"
 )
 
@@ -158,6 +159,10 @@ type Gui struct {
 	SearchEscapeKey    interface{}
 	NextSearchMatchKey interface{}
 	PrevSearchMatchKey interface{}
+
+	screen         tcell.Screen
+	suspendedMutex sync.Mutex
+	suspended      bool
 }
 
 // NewGui returns a new Gui object with a given output mode.
@@ -166,9 +171,9 @@ func NewGui(mode OutputMode, supportOverlaps bool, playMode PlayMode, headless b
 
 	var err error
 	if headless {
-		err = tcellInitSimulation()
+		err = g.tcellInitSimulation()
 	} else {
-		err = tcellInit()
+		err = g.tcellInit()
 	}
 	if err != nil {
 		return nil, err
@@ -266,11 +271,14 @@ func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, er
 	}
 
 	if v, err := g.View(name); err == nil {
+		if v.x0 != x0 || v.x1 != x1 || v.y0 != y0 || v.y1 != y1 {
+			v.tainted = true
+		}
+
 		v.x0 = x0
 		v.y0 = y0
 		v.x1 = x1
 		v.y1 = y1
-		v.tainted = true
 		return v, nil
 	}
 
@@ -997,6 +1005,10 @@ func (g *Gui) drawListFooter(v *View, fgColor, bgColor Attribute) error {
 
 // draw manages the cursor and calls the draw function of a view.
 func (g *Gui) draw(v *View) error {
+	if g.suspended {
+		return nil
+	}
+
 	if g.Cursor {
 		if curview := g.currentView; curview != nil {
 			vMaxX, vMaxY := curview.Size()
@@ -1163,6 +1175,11 @@ func (g *Gui) StartTicking() {
 		for {
 			select {
 			case <-ticker.C:
+				// I'm okay with having a data race here: there's no harm in letting one of these updates through
+				if g.suspended {
+					continue outer
+				}
+
 				for _, view := range g.Views() {
 					if view.HasLoader {
 						g.userEvents <- userEvent{func(g *Gui) error { return nil }}
@@ -1286,4 +1303,30 @@ func (g *Gui) replayRecording() {
 	time.Sleep(time.Second * 1)
 
 	log.Fatal("gocui should have already exited")
+}
+
+func (g *Gui) Suspend() error {
+	g.suspendedMutex.Lock()
+	defer g.suspendedMutex.Unlock()
+
+	if g.suspended {
+		return errors.New("Already suspended")
+	}
+
+	g.suspended = true
+
+	return g.screen.Suspend()
+}
+
+func (g *Gui) Resume() error {
+	g.suspendedMutex.Lock()
+	defer g.suspendedMutex.Unlock()
+
+	if !g.suspended {
+		return errors.New("Cannot resume because we are not suspended")
+	}
+
+	g.suspended = false
+
+	return g.screen.Resume()
 }
