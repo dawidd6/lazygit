@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Dawid Dziurla <dawidd0811@gmail.com>
 Build-Depends: debhelper (>= 9),
                dh-golang,
-               golang-1.10-go|golang-any (>= 1.10),
+               golang-1.13-go|golang-any (>= 1.13),
                git
 Standards-Version: 3.9.7
 Homepage: https://github.com/jesseduffield/lazygit
