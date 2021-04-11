@@ -48,6 +48,7 @@ type TranslationSet struct {
 	LcToggleStaged                      string
 	LcToggleStagedAll                   string
 	LcToggleTreeView                    string
+	LcOpenMergeTool                     string
 	LcRefresh                           string
 	LcPush                              string
 	LcPull                              string
@@ -156,6 +157,8 @@ type TranslationSet struct {
 	CouldNotFindBinaryErr               string
 	AnonymousReportingTitle             string
 	AnonymousReportingPrompt            string
+	MergeToolTitle                      string
+	MergeToolPrompt                     string
 	IntroPopupMessage                   string
 	GitconfigParseErr                   string
 	LcEditFile                          string
@@ -442,7 +445,19 @@ type TranslationSet struct {
 	ErrRepositoryMovedOrDeleted         string
 }
 
-const englishReleaseNotes = `lazygit 0.27 Release Notes
+const englishReleaseNotes = `lazygit 0.27.1-0.27.4 Release notes
+
+Version 0.27 was quite ambitious so a few bugs were introduced. Lesson learnt,
+release features gradually! All the newly introduced bugs should now be fixed,
+except for https://github.com/jesseduffield/lazygit/issues/1233 which looks to
+be a limitation of the new rendering library, tcell.
+
+You can also now open 'git mergetool' by pressing shift+M in the files panel or
+merge panel.
+
+Otherwise, these releases contained minor bug fixes and improvements.
+
+lazygit 0.27 Release Notes
 
 Holy Moly, this is a big one.
 
@@ -641,8 +656,8 @@ Thanks for using lazygit! Three things to share with you:
     Or even just star the repo cos we're not far from 20k stars!
 
  3) You can now read through the release notes by navigating to the status panel.
-    Version 0.23 has a LOT of new stuff so check it out. Also configs are now
-    case-sensitive so run ` + "`" + `lazygit --config` + "`" + ` for comparison.
+    Version 0.27 introduces a file tree view, better rendering, tab/shift+tab
+    keybindings, and more
 `
 
 func englishTranslationSet() TranslationSet {
@@ -683,6 +698,7 @@ func englishTranslationSet() TranslationSet {
 		LcToggleStaged:                      "toggle staged",
 		LcToggleStagedAll:                   "stage/unstage all",
 		LcToggleTreeView:                    "toggle file tree view",
+		LcOpenMergeTool:                     "open external merge tool (git mergetool)",
 		LcRefresh:                           "refresh",
 		LcPush:                              "push",
 		LcPull:                              "pull",
@@ -791,6 +807,8 @@ func englishTranslationSet() TranslationSet {
 		CouldNotFindBinaryErr:               "Could not find any binary at {{.url}}",
 		AnonymousReportingTitle:             "Help make lazygit better",
 		AnonymousReportingPrompt:            "Would you like to enable anonymous reporting data to help improve lazygit? (enter/esc)",
+		MergeToolTitle:                      "Merge tool",
+		MergeToolPrompt:                     "Are you sure you want to open `git mergetool`?",
 		IntroPopupMessage:                   englishIntroPopupMessage,
 		GitconfigParseErr:                   `Gogit failed to parse your gitconfig file due to the presence of unquoted '\' characters. Removing these should fix the issue.`,
 		LcEditFile:                          `edit file`,
