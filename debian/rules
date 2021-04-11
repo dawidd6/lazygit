@@ -20,7 +20,7 @@ override_dh_auto_test:
 override_dh_auto_build:
 	@echo "COMMIT=$(COMMIT)"
 	@echo "VERSION=$(VERSION)"
-	dh_auto_build -- -ldflags \
+	dh_auto_build -- -mod=vendor -ldflags \
 		"-X main.commit=$(COMMIT) \
 		-X main.date=$(shell date -u +%Y-%m-%d) \
 		-X main.version=$(VERSION) \
