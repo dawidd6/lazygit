@@ -1,3 +1,22 @@
+lazygit (0.27.4-1) xenial; urgency=medium
+
+  [ Dawid Dziurla ]
+  * d/control: bump minimal golang to 1.13
+
+  [ Jesse Duffield ]
+  * fix merge conflict panel not rendering
+  * better way of scrolling to a merge conflict
+  * allow opening merge tool
+  * update release notes
+
+  [ tafryn ]
+  * Fix path for Linux config file
+
+  [ Jesse Duffield ]
+  * update config.md to explain situation with config paths
+
+ --  <runner@fv-az235-242.uj0mmwclat4uxk3jwdi2d2mz5h.xx.internal.cloudapp.net>  Sun, 11 Apr 2021 00:27:53 +0000
+
 lazygit (0.27.3-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
