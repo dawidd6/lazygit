@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/constants"
 )
 
 // Binding - a keybinding mapping a key and modifier to a handler. The keypress
@@ -53,7 +54,8 @@ var keyMapReversed = map[gocui.Key]string{
 	gocui.KeyArrowDown:  "▼",
 	gocui.KeyArrowLeft:  "◄",
 	gocui.KeyArrowRight: "►",
-	gocui.KeyTab:        "tab",   // ctrl+i
+	gocui.KeyTab:        "tab", // ctrl+i
+	gocui.KeyBacktab:    "shift+tab",
 	gocui.KeyEnter:      "enter", // ctrl+m
 	gocui.KeyAltEnter:   "alt+enter",
 	gocui.KeyEsc:        "esc",        // ctrl+[, ctrl+3
@@ -133,6 +135,7 @@ var keymap = map[string]interface{}{
 	"<c-_>":       gocui.KeyCtrlUnderscore,
 	"<backspace>": gocui.KeyBackspace,
 	"<tab>":       gocui.KeyTab,
+	"<backtab>":   gocui.KeyBacktab,
 	"<enter>":     gocui.KeyEnter,
 	"<a-enter>":   gocui.KeyAltEnter,
 	"<esc>":       gocui.KeyEsc,
@@ -188,7 +191,7 @@ func (gui *Gui) getKey(key string) interface{} {
 	if runeCount > 1 {
 		binding := keymap[strings.ToLower(key)]
 		if binding == nil {
-			log.Fatalf("Unrecognized key %s for keybinding. For permitted values see https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Custom_Keybindings.md", strings.ToLower(key))
+			log.Fatalf("Unrecognized key %s for keybinding. For permitted values see %s", strings.ToLower(key), constants.Links.Docs.CustomKeybindings)
 		} else {
 			return binding
 		}
@@ -1112,6 +1115,13 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			OpensMenu:   true,
 		},
 		{
+			ViewName:    "",
+			Key:         gui.getKey(config.Universal.ExtrasMenu),
+			Handler:     gui.handleCreateExtrasMenuPanel,
+			Description: gui.Tr.LcOpenExtrasMenu,
+			OpensMenu:   true,
+		},
+		{
 			ViewName: "secondary",
 			Key:      gocui.MouseWheelUp,
 			Modifier: gocui.ModNone,
@@ -1702,6 +1712,62 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			Description: gui.Tr.LcViewBulkSubmoduleOptions,
 			OpensMenu:   true,
 		},
+		{
+			ViewName: "extras",
+			Key:      gocui.MouseWheelUp,
+			Handler:  gui.scrollUpExtra,
+		},
+		{
+			ViewName: "extras",
+			Key:      gocui.MouseWheelDown,
+			Handler:  gui.scrollDownExtra,
+		},
+		{
+			ViewName:    "extras",
+			Key:         gui.getKey(config.Universal.ExtrasMenu),
+			Handler:     gui.handleCreateExtrasMenuPanel,
+			Description: gui.Tr.LcOpenExtrasMenu,
+			OpensMenu:   true,
+		},
+		{
+			ViewName: "extras",
+			Tag:      "navigation",
+			Contexts: []string{string(COMMAND_LOG_CONTEXT_KEY)},
+			Key:      gui.getKey(config.Universal.PrevItemAlt),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollUpExtra,
+		},
+		{
+			ViewName: "extras",
+			Tag:      "navigation",
+			Contexts: []string{string(COMMAND_LOG_CONTEXT_KEY)},
+			Key:      gui.getKey(config.Universal.PrevItem),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollUpExtra,
+		},
+		{
+			ViewName: "extras",
+			Tag:      "navigation",
+			Contexts: []string{string(COMMAND_LOG_CONTEXT_KEY)},
+			Key:      gui.getKey(config.Universal.NextItem),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollDownExtra,
+		},
+		{
+			ViewName: "extras",
+			Tag:      "navigation",
+			Contexts: []string{string(COMMAND_LOG_CONTEXT_KEY)},
+			Key:      gui.getKey(config.Universal.NextItemAlt),
+			Modifier: gocui.ModNone,
+			Handler:  gui.scrollDownExtra,
+		},
+		{
+			ViewName: "extras",
+			Tag:      "navigation",
+			Key:      gocui.MouseLeft,
+			Modifier: gocui.ModNone,
+			Handler:  gui.handleFocusCommandLog,
+		},
 	}
 
 	for _, viewName := range []string{"status", "branches", "files", "commits", "commitFiles", "stash", "menu"} {
@@ -1710,8 +1776,8 @@ func (gui *Gui) GetInitialKeybindings() []*Binding {
 			{ViewName: viewName, Key: gui.getKey(config.Universal.NextBlock), Modifier: gocui.ModNone, Handler: gui.nextSideWindow},
 			{ViewName: viewName, Key: gui.getKey(config.Universal.PrevBlockAlt), Modifier: gocui.ModNone, Handler: gui.previousSideWindow},
 			{ViewName: viewName, Key: gui.getKey(config.Universal.NextBlockAlt), Modifier: gocui.ModNone, Handler: gui.nextSideWindow},
-			{ViewName: viewName, Key: gocui.KeyBacktab, Modifier: gocui.ModNone, Handler: gui.previousSideWindow},
-			{ViewName: viewName, Key: gocui.KeyTab, Modifier: gocui.ModNone, Handler: gui.nextSideWindow},
+			{ViewName: viewName, Key: gui.getKey(config.Universal.PrevBlockAlt2), Modifier: gocui.ModNone, Handler: gui.previousSideWindow},
+			{ViewName: viewName, Key: gui.getKey(config.Universal.NextBlockAlt2), Modifier: gocui.ModNone, Handler: gui.nextSideWindow},
 		}...)
 	}
 

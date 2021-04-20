@@ -86,6 +86,24 @@ func (v *View) EditWrite(ch rune) {
 	v.moveCursor(w, 0, true)
 }
 
+func (v *View) EditWriteString(str string) {
+	for _, ch := range str {
+		v.EditWrite(ch)
+	}
+}
+
+func (v *View) SetEditorContent(content string) error {
+	v.Clear()
+	if err := v.SetOrigin(0, 0); err != nil {
+		return err
+	}
+	if err := v.SetCursor(0, 0); err != nil {
+		return err
+	}
+	v.EditWriteString(content)
+	return nil
+}
+
 // EditDeleteToStartOfLine is the equivalent of pressing ctrl+U in your terminal, it deletes to the start of the line. Or if you are already at the start of the line, it deletes the newline character
 func (v *View) EditDeleteToStartOfLine() {
 	x, _ := v.Cursor()
@@ -131,6 +149,9 @@ func (v *View) EditGotoToEndOfLine() {
 // EditDelete deletes a rune at the cursor position. back determines the
 // direction.
 func (v *View) EditDelete(back bool) {
+	v.writeMutex.Lock()
+	defer v.writeMutex.Unlock()
+
 	x, y := v.ox+v.cx, v.oy+v.cy
 	if y < 0 {
 		return
@@ -177,6 +198,9 @@ func (v *View) EditDelete(back bool) {
 
 // EditNewLine inserts a new line under the cursor.
 func (v *View) EditNewLine() {
+	v.writeMutex.Lock()
+	defer v.writeMutex.Unlock()
+
 	v.breakLine(v.cx, v.cy)
 	v.ox = 0
 	v.cy = v.cy + 1
@@ -397,9 +421,6 @@ func (v *View) writeRune(x, y int, ch rune) error {
 // position corresponding to the point (x, y).
 // returns the amount of columns that where removed.
 func (v *View) deleteRune(x, y int) (int, error) {
-	v.writeMutex.Lock()
-	defer v.writeMutex.Unlock()
-
 	v.tainted = true
 
 	x, y, err := v.realPosition(x, y)
@@ -427,10 +448,7 @@ func (v *View) deleteRune(x, y int) (int, error) {
 
 // mergeLines merges the lines "y" and "y+1" if possible.
 func (v *View) mergeLines(y int) error {
-	v.writeMutex.Lock()
-	defer v.writeMutex.Unlock()
-
-	v.tainted = true
+	v.clearViewLines()
 
 	_, y, err := v.realPosition(0, y)
 	if err != nil {
@@ -451,9 +469,6 @@ func (v *View) mergeLines(y int) error {
 // breakLine breaks a line of the internal buffer at the position corresponding
 // to the point (x, y).
 func (v *View) breakLine(x, y int) error {
-	v.writeMutex.Lock()
-	defer v.writeMutex.Unlock()
-
 	v.tainted = true
 
 	x, y, err := v.realPosition(x, y)

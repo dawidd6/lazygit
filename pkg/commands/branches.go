@@ -59,9 +59,9 @@ type CheckoutOptions struct {
 func (c *GitCommand) Checkout(branch string, options CheckoutOptions) error {
 	forceArg := ""
 	if options.Force {
-		forceArg = "--force "
+		forceArg = " --force"
 	}
-	return c.OSCommand.RunCommandWithOptions(fmt.Sprintf("git checkout %s %s", forceArg, branch), oscommands.RunCommandOptions{EnvVars: options.EnvVars})
+	return c.OSCommand.RunCommandWithOptions(fmt.Sprintf("git checkout%s %s", forceArg, branch), oscommands.RunCommandOptions{EnvVars: options.EnvVars})
 }
 
 // GetBranchGraph gets the color-formatted graph of the log for the given branch
@@ -150,6 +150,10 @@ func (c *GitCommand) ResetHard(ref string) error {
 // ResetSoft runs `git reset --soft HEAD`
 func (c *GitCommand) ResetSoft(ref string) error {
 	return c.RunCommand("git reset --soft " + ref)
+}
+
+func (c *GitCommand) ResetMixed(ref string) error {
+	return c.RunCommand("git reset --mixed " + ref)
 }
 
 func (c *GitCommand) RenameBranch(oldName string, newName string) error {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/jesseduffield/gocui"
+	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
@@ -19,7 +20,9 @@ func (gui *Gui) handleCommitConfirm() error {
 		flags = "--no-verify"
 	}
 
-	return gui.withGpgHandling(gui.GitCommand.CommitCmdStr(message, flags), gui.Tr.CommittingStatus, func() error {
+	cmdStr := gui.GitCommand.CommitCmdStr(message, flags)
+	gui.OnRunCommand(oscommands.NewCmdLogEntry(cmdStr, gui.Tr.Spans.Commit, true))
+	return gui.withGpgHandling(cmdStr, gui.Tr.CommittingStatus, func() error {
 		_ = gui.returnFromContext()
 		gui.clearEditorView(gui.Views.CommitMessage)
 		return nil
@@ -34,9 +37,9 @@ func (gui *Gui) handleCommitMessageFocused() error {
 	message := utils.ResolvePlaceholderString(
 		gui.Tr.CommitMessageConfirm,
 		map[string]string{
-			"keyBindClose":   "esc",
-			"keyBindConfirm": "enter",
-			"keyBindNewLine": "tab",
+			"keyBindClose":   gui.getKeyDisplay(gui.Config.GetUserConfig().Keybinding.Universal.Return),
+			"keyBindConfirm": gui.getKeyDisplay(gui.Config.GetUserConfig().Keybinding.Universal.Confirm),
+			"keyBindNewLine": gui.getKeyDisplay(gui.Config.GetUserConfig().Keybinding.Universal.AppendNewline),
 		},
 	)
 

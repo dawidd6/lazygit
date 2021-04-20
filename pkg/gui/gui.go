@@ -13,14 +13,14 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/golang-collections/collections/stack"
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/commands"
 	"github.com/jesseduffield/lazygit/pkg/commands/models"
 	"github.com/jesseduffield/lazygit/pkg/commands/oscommands"
-	"github.com/jesseduffield/lazygit/pkg/commands/patch"
 	"github.com/jesseduffield/lazygit/pkg/config"
 	"github.com/jesseduffield/lazygit/pkg/gui/filetree"
+	"github.com/jesseduffield/lazygit/pkg/gui/lbl"
+	"github.com/jesseduffield/lazygit/pkg/gui/mergeconflicts"
 	"github.com/jesseduffield/lazygit/pkg/gui/modes/filtering"
 	"github.com/jesseduffield/lazygit/pkg/gui/types"
 	"github.com/jesseduffield/lazygit/pkg/i18n"
@@ -44,10 +44,14 @@ const (
 	SCREEN_FULL
 )
 
-const StartupPopupVersion = 4
+const StartupPopupVersion = 5
 
 // OverlappingEdges determines if panel edges overlap
 var OverlappingEdges = false
+
+func init() {
+	runewidth.DefaultCondition.EastAsianWidth = false
+}
 
 type ContextManager struct {
 	ContextStack []Context
@@ -109,6 +113,13 @@ type Gui struct {
 	// we typically want to pause some things that are running like background
 	// file refreshes
 	PauseBackgroundThreads bool
+
+	// Log of the commands that get run, to be displayed to the user.
+	CmdLog       []string
+	OnRunCommand func(entry oscommands.CmdLogEntry)
+
+	// the extras window contains things like the command log
+	ShowExtrasWindow bool
 }
 
 type listPanelState struct {
@@ -126,22 +137,13 @@ func (h *listPanelState) GetSelectedLineIdx() int {
 // for now the staging panel state, unlike the other panel states, is going to be
 // non-mutative, so that we don't accidentally end up
 // with mismatches of data. We might change this in the future
-type lBlPanelState struct {
-	SelectedLineIdx  int
-	FirstLineIdx     int
-	LastLineIdx      int
-	Diff             string
-	PatchParser      *patch.PatchParser
-	SelectMode       SelectMode
+type LblPanelState struct {
+	*lbl.State
 	SecondaryFocused bool // this is for if we show the left or right panel
 }
 
-type mergingPanelState struct {
-	ConflictIndex  int
-	ConflictTop    bool
-	Conflicts      []commands.Conflict
-	ConflictsMutex sync.Mutex
-	EditHistory    *stack.Stack
+type MergingPanelState struct {
+	*mergeconflicts.State
 
 	// UserScrolling tells us if the user has started scrolling through the file themselves
 	// in which case we won't auto-scroll to a conflict.
@@ -223,8 +225,8 @@ type panelStates struct {
 	SubCommits     *subCommitPanelState
 	Stash          *stashPanelState
 	Menu           *menuPanelState
-	LineByLine     *lBlPanelState
-	Merging        *mergingPanelState
+	LineByLine     *LblPanelState
+	Merging        *MergingPanelState
 	CommitFiles    *commitFilesPanelState
 	Submodules     *submodulePanelState
 	Suggestions    *suggestionsPanelState
@@ -250,6 +252,7 @@ type Views struct {
 	SearchPrefix  *gocui.View
 	Limit         *gocui.View
 	Suggestions   *gocui.View
+	Extras        *gocui.View
 }
 
 type searchingState struct {
@@ -333,7 +336,6 @@ type guiState struct {
 	IsRefreshingFiles bool
 	Searching         searchingState
 	ScreenMode        WindowMaximisation
-	SideView          *gocui.View
 	Ptmx              *os.File
 	PrevMainWidth     int
 	PrevMainHeight    int
@@ -415,16 +417,12 @@ func (gui *Gui) resetState(filterPath string, reuseState bool) {
 			Stash:          &stashPanelState{listPanelState{SelectedLineIdx: -1}},
 			Menu:           &menuPanelState{listPanelState: listPanelState{SelectedLineIdx: 0}, OnPress: nil},
 			Suggestions:    &suggestionsPanelState{listPanelState: listPanelState{SelectedLineIdx: 0}},
-			Merging: &mergingPanelState{
-				ConflictIndex:  0,
-				ConflictTop:    true,
-				Conflicts:      []commands.Conflict{},
-				EditHistory:    stack.New(),
-				ConflictsMutex: sync.Mutex{},
+			Merging: &MergingPanelState{
+				State:         mergeconflicts.NewState(),
+				UserScrolling: false,
 			},
 		},
-		SideView: nil,
-		Ptmx:     nil,
+		Ptmx: nil,
 		Modes: Modes{
 			Filtering: filtering.NewFiltering(filterPath),
 			CherryPicking: CherryPicking{
@@ -459,11 +457,17 @@ func NewGui(log *logrus.Entry, gitCommand *commands.GitCommand, oSCommand *oscom
 		showRecentRepos:      showRecentRepos,
 		RepoPathStack:        []string{},
 		RepoStateMap:         map[Repo]*guiState{},
+		CmdLog:               []string{},
+		ShowExtrasWindow:     config.GetUserConfig().Gui.ShowCommandLog,
 	}
 
 	gui.resetState(filterPath, false)
 
 	gui.watchFilesForChanges()
+
+	onRunCommand := gui.GetOnRunCommand()
+	oSCommand.SetOnRunCommand(onRunCommand)
+	gui.OnRunCommand = onRunCommand
 
 	return gui, nil
 }
@@ -713,7 +717,7 @@ func (gui *Gui) startBackgroundFetch() {
 	if !isNew {
 		time.After(time.Duration(userConfig.Refresher.FetchInterval) * time.Second)
 	}
-	err := gui.fetch(false)
+	err := gui.fetch(false, "")
 	if err != nil && strings.Contains(err.Error(), "exit status 128") && isNew {
 		_ = gui.ask(askOpts{
 			title:  gui.Tr.NoAutomaticGitFetchTitle,
@@ -721,7 +725,7 @@ func (gui *Gui) startBackgroundFetch() {
 		})
 	} else {
 		gui.goEvery(time.Second*time.Duration(userConfig.Refresher.FetchInterval), gui.stopChan, func() error {
-			err := gui.fetch(false)
+			err := gui.fetch(false, "")
 			return err
 		})
 	}

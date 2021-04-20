@@ -40,6 +40,44 @@ type OSCommand struct {
 	Command          func(string, ...string) *exec.Cmd
 	BeforeExecuteCmd func(*exec.Cmd)
 	Getenv           func(string) string
+
+	// callback to run before running a command, i.e. for the purposes of logging
+	onRunCommand func(CmdLogEntry)
+
+	// something like 'Staging File': allows us to group cmd logs under a single title
+	CmdLogSpan string
+
+	removeFile func(string) error
+}
+
+// TODO: make these fields private
+type CmdLogEntry struct {
+	// e.g. 'git commit -m "haha"'
+	cmdStr string
+	// Span is something like 'Staging File'. Multiple commands can be grouped under the same
+	// span
+	span string
+
+	// sometimes our command is direct like 'git commit', and sometimes it's a
+	// command to remove a file but through Go's standard library rather than the
+	// command line
+	commandLine bool
+}
+
+func (e CmdLogEntry) GetCmdStr() string {
+	return e.cmdStr
+}
+
+func (e CmdLogEntry) GetSpan() string {
+	return e.span
+}
+
+func (e CmdLogEntry) GetCommandLine() bool {
+	return e.commandLine
+}
+
+func NewCmdLogEntry(cmdStr string, span string, commandLine bool) CmdLogEntry {
+	return CmdLogEntry{cmdStr: cmdStr, span: span, commandLine: commandLine}
 }
 
 // NewOSCommand os command runner
@@ -51,13 +89,49 @@ func NewOSCommand(log *logrus.Entry, config config.AppConfigurer) *OSCommand {
 		Command:          secureexec.Command,
 		BeforeExecuteCmd: func(*exec.Cmd) {},
 		Getenv:           os.Getenv,
+		removeFile:       os.RemoveAll,
 	}
+}
+
+func (c *OSCommand) WithSpan(span string) *OSCommand {
+	// sometimes .WithSpan(span) will be called where span actually is empty, in
+	// which case we don't need to log anything so we can just return early here
+	// with the original struct
+	if span == "" {
+		return c
+	}
+
+	newOSCommand := &OSCommand{}
+	*newOSCommand = *c
+	newOSCommand.CmdLogSpan = span
+	return newOSCommand
+}
+
+func (c *OSCommand) LogExecCmd(cmd *exec.Cmd) {
+	c.LogCommand(strings.Join(cmd.Args, " "), true)
+}
+
+func (c *OSCommand) LogCommand(cmdStr string, commandLine bool) {
+	c.Log.WithField("command", cmdStr).Info("RunCommand")
+
+	if c.onRunCommand != nil && c.CmdLogSpan != "" {
+		c.onRunCommand(NewCmdLogEntry(cmdStr, c.CmdLogSpan, commandLine))
+	}
+}
+
+func (c *OSCommand) SetOnRunCommand(f func(CmdLogEntry)) {
+	c.onRunCommand = f
 }
 
 // SetCommand sets the command function used by the struct.
 // To be used for testing only
 func (c *OSCommand) SetCommand(cmd func(string, ...string) *exec.Cmd) {
 	c.Command = cmd
+}
+
+// To be used for testing only
+func (c *OSCommand) SetRemoveFile(f func(string) error) {
+	c.removeFile = f
 }
 
 func (c *OSCommand) SetBeforeExecuteCmd(cmd func(*exec.Cmd)) {
@@ -69,7 +143,7 @@ type RunCommandOptions struct {
 }
 
 func (c *OSCommand) RunCommandWithOutputWithOptions(command string, options RunCommandOptions) (string, error) {
-	c.Log.WithField("command", command).Info("RunCommand")
+	c.LogCommand(command, true)
 	cmd := c.ExecutableFromString(command)
 
 	cmd.Env = append(cmd.Env, "GIT_TERMINAL_PROMPT=0") // prevents git from prompting us for input which would freeze the program
@@ -94,8 +168,8 @@ func (c *OSCommand) RunCommandWithOutput(formatString string, formatArgs ...inte
 	if formatArgs != nil {
 		command = fmt.Sprintf(formatString, formatArgs...)
 	}
-	c.Log.WithField("command", command).Info("RunCommand")
 	cmd := c.ExecutableFromString(command)
+	c.LogExecCmd(cmd)
 	output, err := sanitisedCommandOutput(cmd.CombinedOutput())
 	if err != nil {
 		c.Log.WithField("command", command).Error(output)
@@ -103,20 +177,9 @@ func (c *OSCommand) RunCommandWithOutput(formatString string, formatArgs ...inte
 	return output, err
 }
 
-func (c *OSCommand) CatFile(filename string) (string, error) {
-	arr := append(c.Platform.CatCmd, filename)
-	cmdStr := strings.Join(arr, " ")
-	c.Log.WithField("command", cmdStr).Info("Cat")
-	cmd := c.Command(arr[0], arr[1:]...)
-	output, err := sanitisedCommandOutput(cmd.CombinedOutput())
-	if err != nil {
-		c.Log.WithField("command", cmdStr).Error(output)
-	}
-	return output, err
-}
-
 // RunExecutableWithOutput runs an executable file and returns its output
 func (c *OSCommand) RunExecutableWithOutput(cmd *exec.Cmd) (string, error) {
+	c.LogExecCmd(cmd)
 	c.BeforeExecuteCmd(cmd)
 	return sanitisedCommandOutput(cmd.CombinedOutput())
 }
@@ -152,6 +215,18 @@ func (c *OSCommand) ShellCommandFromString(commandStr string) *exec.Cmd {
 // RunCommandWithOutputLive runs RunCommandWithOutputLiveWrapper
 func (c *OSCommand) RunCommandWithOutputLive(command string, output func(string) string) error {
 	return RunCommandWithOutputLiveWrapper(c, command, output)
+}
+
+func (c *OSCommand) CatFile(filename string) (string, error) {
+	arr := append(c.Platform.CatCmd, filename)
+	cmdStr := strings.Join(arr, " ")
+	c.Log.WithField("command", cmdStr).Info("Cat")
+	cmd := c.Command(arr[0], arr[1:]...)
+	output, err := sanitisedCommandOutput(cmd.CombinedOutput())
+	if err != nil {
+		c.Log.WithField("command", cmdStr).Error(output)
+	}
+	return output, err
 }
 
 // DetectUnamePass detect a username / password / passphrase question in a command
@@ -190,9 +265,9 @@ func (c *OSCommand) RunCommand(formatString string, formatArgs ...interface{}) e
 // RunShellCommand runs shell commands i.e. 'sh -c <command>'. Good for when you
 // need access to the shell
 func (c *OSCommand) RunShellCommand(command string) error {
-	c.Log.WithField("command", command).Info("RunShellCommand")
-
 	cmd := c.Command(c.Platform.Shell, c.Platform.ShellArg, command)
+	c.LogExecCmd(cmd)
+
 	_, err := sanitisedCommandOutput(cmd.CombinedOutput())
 
 	return err
@@ -237,6 +312,7 @@ func (c *OSCommand) OpenFile(filename string) error {
 
 // OpenLink opens a file with the given
 func (c *OSCommand) OpenLink(link string) error {
+	c.LogCommand(fmt.Sprintf("Opening link '%s'", link), false)
 	commandTemplate := c.Config.GetUserConfig().OS.OpenLinkCommand
 	templateValues := map[string]string{
 		"link": c.Quote(link),
@@ -254,6 +330,7 @@ func (c *OSCommand) PrepareSubProcess(cmdName string, commandArgs ...string) *ex
 	if cmd != nil {
 		cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0")
 	}
+	c.LogExecCmd(cmd)
 	return cmd
 }
 
@@ -279,6 +356,7 @@ func (c *OSCommand) Quote(message string) string {
 
 // AppendLineToFile adds a new line in file
 func (c *OSCommand) AppendLineToFile(filename, line string) error {
+	c.LogCommand(fmt.Sprintf("Appending '%s' to file '%s'", line, filename), false)
 	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return utils.WrapError(err)
@@ -299,6 +377,7 @@ func (c *OSCommand) CreateTempFile(filename, content string) (string, error) {
 		c.Log.Error(err)
 		return "", utils.WrapError(err)
 	}
+	c.LogCommand(fmt.Sprintf("Creating temp file '%s'", tmpfile.Name()), false)
 
 	if _, err := tmpfile.WriteString(content); err != nil {
 		c.Log.Error(err)
@@ -314,6 +393,7 @@ func (c *OSCommand) CreateTempFile(filename, content string) (string, error) {
 
 // CreateFileWithContent creates a file with the given content
 func (c *OSCommand) CreateFileWithContent(path string, content string) error {
+	c.LogCommand(fmt.Sprintf("Creating file '%s'", path), false)
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		c.Log.Error(err)
 		return err
@@ -329,6 +409,7 @@ func (c *OSCommand) CreateFileWithContent(path string, content string) error {
 
 // Remove removes a file or directory at the specified path
 func (c *OSCommand) Remove(filename string) error {
+	c.LogCommand(fmt.Sprintf("Removing '%s'", filename), false)
 	err := os.RemoveAll(filename)
 	return utils.WrapError(err)
 }
@@ -349,6 +430,7 @@ func (c *OSCommand) FileExists(path string) (bool, error) {
 // before running it
 func (c *OSCommand) RunPreparedCommand(cmd *exec.Cmd) error {
 	c.BeforeExecuteCmd(cmd)
+	c.LogExecCmd(cmd)
 	out, err := cmd.CombinedOutput()
 	outString := string(out)
 	c.Log.Info(outString)
@@ -372,12 +454,16 @@ func (c *OSCommand) GetLazygitPath() string {
 
 // PipeCommands runs a heap of commands and pipes their inputs/outputs together like A | B | C
 func (c *OSCommand) PipeCommands(commandStrings ...string) error {
-
 	cmds := make([]*exec.Cmd, len(commandStrings))
-
+	logCmdStr := ""
 	for i, str := range commandStrings {
+		if i > 0 {
+			logCmdStr += " | "
+		}
+		logCmdStr += str
 		cmds[i] = c.ExecutableFromString(str)
 	}
+	c.LogCommand(logCmdStr, true)
 
 	for i := 0; i < len(cmds)-1; i++ {
 		stdout, err := cmds[i].StdoutPipe()
@@ -468,5 +554,12 @@ func RunLineOutputCmd(cmd *exec.Cmd, onLine func(line string) (bool, error)) err
 }
 
 func (c *OSCommand) CopyToClipboard(str string) error {
+	c.LogCommand(fmt.Sprintf("Copying '%s' to clipboard", utils.TruncateWithEllipsis(str, 40)), false)
 	return clipboard.WriteAll(str)
+}
+
+func (c *OSCommand) RemoveFile(path string) error {
+	c.LogCommand(fmt.Sprintf("Deleting path '%s'", path), false)
+
+	return c.removeFile(path)
 }

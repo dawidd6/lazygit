@@ -36,6 +36,9 @@ type GuiConfig struct {
 	CommitLength             CommitLengthConfig `yaml:"commitLength"`
 	SkipNoStagedFilesWarning bool               `yaml:"skipNoStagedFilesWarning"`
 	ShowFileTree             bool               `yaml:"showFileTree"`
+	ShowRandomTip            bool               `yaml:"showRandomTip"`
+	ShowCommandLog           bool               `yaml:"showCommandLog"`
+	CommandLogSize           int                `yaml:"commandLogSize"`
 }
 
 type ThemeConfig struct {
@@ -101,6 +104,7 @@ type KeybindingConfig struct {
 	Submodules  KeybindingSubmodulesConfig  `yaml:"submodules"`
 }
 
+// damn looks like we have some inconsistencies here with -alt and -alt1
 type KeybindingUniversalConfig struct {
 	Quit                         string `yaml:"quit"`
 	QuitAlt1                     string `yaml:"quit-alt1"`
@@ -119,6 +123,8 @@ type KeybindingUniversalConfig struct {
 	NextBlock                    string `yaml:"nextBlock"`
 	PrevBlockAlt                 string `yaml:"prevBlock-alt"`
 	NextBlockAlt                 string `yaml:"nextBlock-alt"`
+	NextBlockAlt2                string `yaml:"nextBlock-alt2"`
+	PrevBlockAlt2                string `yaml:"prevBlock-alt2"`
 	NextMatch                    string `yaml:"nextMatch"`
 	PrevMatch                    string `yaml:"prevMatch"`
 	StartSearch                  string `yaml:"startSearch"`
@@ -156,6 +162,7 @@ type KeybindingUniversalConfig struct {
 	CopyToClipboard              string `yaml:"copyToClipboard"`
 	SubmitEditorText             string `yaml:"submitEditorText"`
 	AppendNewline                string `yaml:"appendNewline"`
+	ExtrasMenu                   string `yaml:"extrasMenu"`
 }
 
 type KeybindingStatusConfig struct {
@@ -295,6 +302,10 @@ func GetDefaultConfig() *UserConfig {
 			},
 			CommitLength:             CommitLengthConfig{Show: true},
 			SkipNoStagedFilesWarning: false,
+			ShowCommandLog:           true,
+			ShowFileTree:             false,
+			ShowRandomTip:            true,
+			CommandLogSize:           8,
 		},
 		Git: GitConfig{
 			Paging: PagingConfig{
@@ -346,6 +357,8 @@ func GetDefaultConfig() *UserConfig {
 				NextBlock:                    "<right>",
 				PrevBlockAlt:                 "h",
 				NextBlockAlt:                 "l",
+				PrevBlockAlt2:                "<backtab>",
+				NextBlockAlt2:                "<tab>",
 				NextMatch:                    "n",
 				PrevMatch:                    "N",
 				StartSearch:                  "/",
@@ -383,6 +396,7 @@ func GetDefaultConfig() *UserConfig {
 				CopyToClipboard:              "<c-o>",
 				SubmitEditorText:             "<enter>",
 				AppendNewline:                "<a-enter>",
+				ExtrasMenu:                   "@",
 			},
 			Status: KeybindingStatusConfig{
 				CheckForUpdate:      "u",

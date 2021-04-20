@@ -272,7 +272,7 @@ func (g *Gui) SetView(name string, x0, y0, x1, y1 int, overlaps byte) (*View, er
 
 	if v, err := g.View(name); err == nil {
 		if v.x0 != x0 || v.x1 != x1 || v.y0 != y0 || v.y1 != y1 {
-			v.tainted = true
+			v.clearViewLines()
 		}
 
 		v.x0 = x0
@@ -651,12 +651,17 @@ func (g *Gui) handleEvent(ev *GocuiEvent) error {
 		return g.onKey(ev)
 	case eventError:
 		return ev.Err
-	// Not sure if this should be handled. It acts weirder when it's here
-	// case eventResize:
-	// 	return Sync()
+	case eventResize:
+		g.onResize()
+		return nil
 	default:
 		return nil
 	}
+}
+
+func (g *Gui) onResize() {
+	// not sure if we actually need this
+	// g.screen.Sync()
 }
 
 // flush updates the gui, re-drawing frames and buffers.
@@ -668,7 +673,7 @@ func (g *Gui) flush() error {
 	// if GUI's size has changed, we need to redraw all views
 	if maxX != g.maxX || maxY != g.maxY {
 		for _, v := range g.views {
-			v.tainted = true
+			v.clearViewLines()
 		}
 	}
 	g.maxX, g.maxY = maxX, maxY

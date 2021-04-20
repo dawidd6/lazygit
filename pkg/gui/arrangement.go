@@ -5,6 +5,8 @@ import (
 	"github.com/jesseduffield/lazygit/pkg/utils"
 )
 
+const INFO_SECTION_PADDING = " "
+
 func (gui *Gui) mainSectionChildren() []*boxlayout.Box {
 	currentWindow := gui.currentWindow()
 
@@ -130,6 +132,24 @@ func (gui *Gui) splitMainPanelSideBySide() bool {
 	}
 }
 
+func (gui *Gui) getExtrasWindowSize(screenHeight int) int {
+	if !gui.ShowExtrasWindow {
+		return 0
+	}
+
+	var baseSize int
+	if gui.currentStaticContext().GetKey() == COMMAND_LOG_CONTEXT_KEY {
+		baseSize = 1000 // my way of saying 'fill the available space'
+	} else if screenHeight < 40 {
+		baseSize = 1
+	} else {
+		baseSize = gui.Config.GetUserConfig().Gui.CommandLogSize
+	}
+
+	frameSize := 2
+	return baseSize + frameSize
+}
+
 func (gui *Gui) getWindowDimensions(informationStr string, appStatus string) map[string]boxlayout.Dimensions {
 	width, height := gui.g.Size()
 
@@ -146,6 +166,8 @@ func (gui *Gui) getWindowDimensions(informationStr string, appStatus string) map
 		mainPanelsDirection = boxlayout.COLUMN
 	}
 
+	extrasWindowSize := gui.getExtrasWindowSize(height)
+
 	root := &boxlayout.Box{
 		Direction: boxlayout.ROW,
 		Children: []*boxlayout.Box{
@@ -159,9 +181,19 @@ func (gui *Gui) getWindowDimensions(informationStr string, appStatus string) map
 						ConditionalChildren: gui.sidePanelChildren,
 					},
 					{
-						Direction: mainPanelsDirection,
+						Direction: boxlayout.ROW,
 						Weight:    mainSectionWeight,
-						Children:  gui.mainSectionChildren(),
+						Children: []*boxlayout.Box{
+							{
+								Direction: mainPanelsDirection,
+								Children:  gui.mainSectionChildren(),
+								Weight:    1,
+							},
+							{
+								Window: "extras",
+								Size:   extrasWindowSize,
+							},
+						},
 					},
 				},
 			},

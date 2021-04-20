@@ -1,28 +1,11 @@
 package gui
 
 import (
-	"github.com/fatih/color"
 	"github.com/jesseduffield/gocui"
 	"github.com/jesseduffield/lazygit/pkg/theme"
 )
 
 const SEARCH_PREFIX = "search: "
-const INFO_SECTION_PADDING = " "
-
-func (gui *Gui) informationStr() string {
-	for _, mode := range gui.modeStatuses() {
-		if mode.isActive() {
-			return mode.description()
-		}
-	}
-
-	if gui.g.Mouse {
-		donate := color.New(color.FgMagenta, color.Underline).Sprint(gui.Tr.Donate)
-		return donate + " " + gui.Config.GetVersion()
-	} else {
-		return gui.Config.GetVersion()
-	}
-}
 
 func (gui *Gui) createAllViews() error {
 	viewNameMappings := []struct {
@@ -48,6 +31,7 @@ func (gui *Gui) createAllViews() error {
 		{viewPtr: &gui.Views.Suggestions, name: "suggestions"},
 		{viewPtr: &gui.Views.Confirmation, name: "confirmation"},
 		{viewPtr: &gui.Views.Limit, name: "limit"},
+		{viewPtr: &gui.Views.Extras, name: "extras"},
 	}
 
 	var err error
@@ -133,6 +117,12 @@ func (gui *Gui) createAllViews() error {
 	gui.Views.Information.BgColor = gocui.ColorDefault
 	gui.Views.Information.FgColor = gocui.ColorGreen
 	gui.Views.Information.Frame = false
+
+	gui.Views.Extras.Title = gui.Tr.CommandLog
+	gui.Views.Extras.FgColor = theme.GocuiDefaultTextColor
+	gui.Views.Extras.Autoscroll = true
+	gui.Views.Extras.Wrap = true
+	gui.printCommandLogHeader()
 
 	if _, err := gui.g.SetCurrentView(gui.defaultSideContext().GetViewName()); err != nil {
 		return err
@@ -235,6 +225,7 @@ func (gui *Gui) layout(g *gocui.Gui) error {
 		{viewName: "search", windowName: "search", frame: false},
 		{viewName: "appStatus", windowName: "appStatus", frame: false},
 		{viewName: "information", windowName: "information", frame: false},
+		{viewName: "extras", windowName: "extras", frame: true},
 	}
 
 	for _, arg := range args {
@@ -344,6 +335,7 @@ func (gui *Gui) onInitialViewsCreation() error {
 		gui.Views.CommitFiles,
 		gui.Views.Main,
 		gui.Views.Secondary,
+		gui.Views.Extras,
 
 		// bottom line
 		gui.Views.Options,

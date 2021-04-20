@@ -33,7 +33,6 @@ type GitCommand struct {
 	Tr                   *i18n.TranslationSet
 	Config               config.AppConfigurer
 	getGitConfigValue    func(string) (string, error)
-	removeFile           func(string) error
 	DotGitDir            string
 	onSuccessfulContinue func() error
 	PatchManager         *patch.PatchManager
@@ -75,7 +74,6 @@ func NewGitCommand(log *logrus.Entry, osCommand *oscommands.OSCommand, tr *i18n.
 		Repo:              repo,
 		Config:            config,
 		getGitConfigValue: getGitConfigValue,
-		removeFile:        os.RemoveAll,
 		DotGitDir:         dotGitDir,
 		PushToCurrent:     pushToCurrent,
 	}
@@ -83,6 +81,27 @@ func NewGitCommand(log *logrus.Entry, osCommand *oscommands.OSCommand, tr *i18n.
 	gitCommand.PatchManager = patch.NewPatchManager(log, gitCommand.ApplyPatch, gitCommand.ShowFileDiff)
 
 	return gitCommand, nil
+}
+
+func (c *GitCommand) WithSpan(span string) *GitCommand {
+	// sometimes .WithSpan(span) will be called where span actually is empty, in
+	// which case we don't need to log anything so we can just return early here
+	// with the original struct
+	if span == "" {
+		return c
+	}
+
+	newGitCommand := &GitCommand{}
+	*newGitCommand = *c
+	newGitCommand.OSCommand = c.OSCommand.WithSpan(span)
+
+	// NOTE: unlike the other things here which create shallow clones, this will
+	// actually update the PatchManager on the original struct to have the new span.
+	// This means each time we call ApplyPatch in PatchManager, we need to ensure
+	// we've called .WithSpan() ahead of time with the new span value
+	newGitCommand.PatchManager.ApplyPatch = newGitCommand.ApplyPatch
+
+	return newGitCommand
 }
 
 func navigateToRepoRootDirectory(stat func(string) (os.FileInfo, error), chdir func(string) error) error {

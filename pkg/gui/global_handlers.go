@@ -68,6 +68,21 @@ func (gui *Gui) scrollUpView(view *gocui.View) error {
 
 func (gui *Gui) scrollDownView(view *gocui.View) error {
 	ox, oy := view.Origin()
+	scrollHeight := gui.linesToScrollDown(view)
+	if scrollHeight > 0 {
+		if err := view.SetOrigin(ox, oy+scrollHeight); err != nil {
+			return err
+		}
+	}
+
+	if manager, ok := gui.viewBufferManagerMap[view.Name()]; ok {
+		manager.ReadLines(scrollHeight)
+	}
+	return nil
+}
+
+func (gui *Gui) linesToScrollDown(view *gocui.View) int {
+	_, oy := view.Origin()
 	y := oy
 	canScrollPastBottom := gui.Config.GetUserConfig().Gui.ScrollPastBottom
 	if !canScrollPastBottom {
@@ -76,27 +91,25 @@ func (gui *Gui) scrollDownView(view *gocui.View) error {
 	}
 	scrollHeight := gui.Config.GetUserConfig().Gui.ScrollHeight
 	scrollableLines := view.ViewLinesHeight() - y
-	if scrollableLines > 0 {
-		// margin is about how many lines must still appear if you scroll
-		// all the way down. In practice every file ends in a newline so it will really
-		// just show a single line
-		margin := 1
-		if canScrollPastBottom {
-			margin = 2
-		}
-		if scrollableLines-margin < scrollHeight {
-			scrollHeight = scrollableLines - margin
-		}
-		if oy+scrollHeight >= 0 {
-			if err := view.SetOrigin(ox, oy+scrollHeight); err != nil {
-				return err
-			}
-		}
+	if scrollableLines < 0 {
+		return 0
 	}
-	if manager, ok := gui.viewBufferManagerMap[view.Name()]; ok {
-		manager.ReadLines(scrollHeight)
+
+	// margin is about how many lines must still appear if you scroll
+	// all the way down. In practice every file ends in a newline so it will really
+	// just show a single line
+	margin := 1
+	if canScrollPastBottom {
+		margin = 2
 	}
-	return nil
+	if scrollableLines-margin < scrollHeight {
+		scrollHeight = scrollableLines - margin
+	}
+	if oy+scrollHeight < 0 {
+		return 0
+	} else {
+		return scrollHeight
+	}
 }
 
 func (gui *Gui) scrollUpMain() error {
@@ -148,13 +161,13 @@ func (gui *Gui) handleMouseDownMain() error {
 		return nil
 	}
 
-	switch gui.g.CurrentView() {
-	case gui.Views.Files:
+	switch gui.currentSideContext() {
+	case gui.State.Contexts.Files:
 		// set filename, set primary/secondary selected, set line number, then switch context
 		// I'll need to know it was changed though.
 		// Could I pass something along to the context change?
 		return gui.enterFile(false, gui.Views.Main.SelectedLineIdx())
-	case gui.Views.CommitFiles:
+	case gui.State.Contexts.CommitFiles:
 		return gui.enterCommitFile(gui.Views.Main.SelectedLineIdx())
 	}
 
@@ -174,33 +187,7 @@ func (gui *Gui) handleMouseDownSecondary() error {
 	return nil
 }
 
-func (gui *Gui) handleInfoClick() error {
-	if !gui.g.Mouse {
-		return nil
-	}
-
-	view := gui.Views.Information
-
-	cx, _ := view.Cursor()
-	width, _ := view.Size()
-
-	for _, mode := range gui.modeStatuses() {
-		if mode.isActive() {
-			if width-cx > len(gui.Tr.ResetInParentheses) {
-				return nil
-			}
-			return mode.reset()
-		}
-	}
-
-	// if we're not in an active mode we show the donate button
-	if cx <= len(gui.Tr.Donate)+len(INFO_SECTION_PADDING) {
-		return gui.OSCommand.OpenLink("https://github.com/sponsors/jesseduffield")
-	}
-	return nil
-}
-
-func (gui *Gui) fetch(canPromptForCredentials bool) (err error) {
+func (gui *Gui) fetch(canPromptForCredentials bool, span string) (err error) {
 	gui.Mutexes.FetchMutex.Lock()
 	defer gui.Mutexes.FetchMutex.Unlock()
 
@@ -209,7 +196,7 @@ func (gui *Gui) fetch(canPromptForCredentials bool) (err error) {
 		fetchOpts.PromptUserForCredential = gui.promptUserForCredential
 	}
 
-	err = gui.GitCommand.Fetch(fetchOpts)
+	err = gui.GitCommand.WithSpan(span).Fetch(fetchOpts)
 
 	if canPromptForCredentials && err != nil && strings.Contains(err.Error(), "exit status 128") {
 		_ = gui.createErrorPanel(gui.Tr.PassUnameWrong)
@@ -228,7 +215,7 @@ func (gui *Gui) handleCopySelectedSideContextItemToClipboard() error {
 		return nil
 	}
 
-	if err := gui.OSCommand.CopyToClipboard(itemId); err != nil {
+	if err := gui.OSCommand.WithSpan(gui.Tr.Spans.CopyToClipboard).CopyToClipboard(itemId); err != nil {
 		return gui.surfaceError(err)
 	}
 
