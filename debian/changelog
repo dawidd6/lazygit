@@ -1,3 +1,10 @@
+lazygit (0.28.1-1) xenial; urgency=medium
+
+  [ Petróczi Zoltán ]
+  * Fix englishIntroPopupMessage typo in english.go
+
+ --  <runner@fv-az196-977.jtpmctcvnzqejnuy0st5dkw3nb.bx.internal.cloudapp.net>  Tue, 20 Apr 2021 11:09:54 +0000
+
 lazygit (0.28-1) xenial; urgency=medium
 
   [ Jesse Duffield ]
