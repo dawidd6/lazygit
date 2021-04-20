@@ -1,3 +1,49 @@
+lazygit (0.28-1) xenial; urgency=medium
+
+  [ Jesse Duffield ]
+  * add cmdLog panel
+  * start adding support for logging of commands
+  * fix bug where mixed reset is actually a soft reset
+  * more logging of commands
+  * full coverage for logging commands
+  * no need to log this
+  * log TODO content when interactive rebasing
+  * support scrolling extras view
+  * support static boxes that go outside the available size
+  * allow showing, hiding, and scrolling the extras panel
+  * more support for command log and more code reuse for contexts
+  * allow focusing on command log view
+  * fix test
+  * prettify config.md
+  * ask question button
+  * pull out function
+  * add spans to i18n
+  * print header for command log
+  * make command log size configurable
+  * add random tip to command log
+  * fix up doc
+  * linting
+  * bump gocui to fix resizing issue
+  * fix rendering issues caused by resizing
+  * allow hiding random tip
+  * better squash description
+  * fix race condition
+  * update keybindings
+
+  [ Peijun Ma ]
+  * Fix typo: scrool -> scroll
+
+  [ Jesse Duffield ]
+  * bubble up tracked files in flat file view
+  * force cursor to be at end of line when opening confirmation panel
+  * refactor line by line panel
+  * refactor merge panel
+  * smarter sizing of command log panel
+  * ignore east asian width setting to avoid broken frame rendering
+  * update release notes
+
+ --  <runner@fv-az173-970.h4pcb1qgckmubfchnqyq5btvmd.gx.internal.cloudapp.net>  Tue, 20 Apr 2021 08:36:40 +0000
+
 lazygit (0.27.4-5) bionic; urgency=medium
 
   * F
